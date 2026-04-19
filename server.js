@@ -1,6 +1,7 @@
 /**
  * Employee Task Management System - Backend Server
  * Main entry point for the API
+ * Modified for cloud deployment (Render)
  */
 
 // Import required packages
@@ -22,8 +23,14 @@ const departmentRoutes = require('./routes/departmentRoutes');
 // Initialize Express app
 const app = express();
 
-// Middleware
-app.use(cors());
+// === إعدادات CORS للسحابة ===
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -64,12 +71,22 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/bonuses', bonusRoutes);
 app.use('/api/departments', departmentRoutes);
 
-// Health check endpoint
+// Health check endpoint (مهم لـ Render)
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'success', 
     message: 'الخادم يعمل بشكل صحيح',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: '🚀 Employee Task Management API is running',
+    version: '1.0.0',
+    docs: '/api/health'
   });
 });
 
@@ -78,7 +95,8 @@ app.use((err, req, res, next) => {
   console.error('خطأ في الخادم:', err);
   res.status(500).json({
     success: false,
-    message: 'حدث خطأ في الخادم'
+    message: 'حدث خطأ في الخادم',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
@@ -90,11 +108,32 @@ app.use((req, res) => {
   });
 });
 
-// Start server
+// === إعدادات التشغيل للسحابة ===
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`✅ الخادم يعمل على المنفذ ${PORT}`);
-  initializeData();
+const HOST = '0.0.0.0'; // مهم ليعمل على Render
+
+// دالة بدء التشغيل
+const startServer = () => {
+  app.listen(PORT, HOST, () => {
+    console.log(`✅ الخادم يعمل على ${HOST}:${PORT}`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+    initializeData();
+  });
+};
+
+// التعامل مع إشارات الإغلاق الآمن
+process.on('SIGTERM', () => {
+  console.log('🔄 SIGTERM received, shutting down gracefully');
+  process.exit(0);
 });
 
+process.on('SIGINT', () => {
+  console.log('🔄 SIGINT received, shutting down gracefully');
+  process.exit(0);
+});
+
+// بدء السيرفر
+startServer();
+
+// تصدير التطبيق للاستخدام في الاختبارات أو الـ serverless
 module.exports = app;
