@@ -27,11 +27,14 @@ router.get('/employees', protect, managerOrAdmin, getAllEmployees);
 // GET /api/users - Get all users (for admin/manager to give bonuses)
 router.get('/', protect, managerOrAdmin, async (req, res) => {
   try {
+    console.log('Fetching all users...');
     const { User } = require('../models/User');
-    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    const users = await User.find().select('-password').sort({ name: 1 });
+    console.log('Found users:', users.length);
     res.json({ success: true, data: { users } });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Error fetching users' });
+    console.error('Error fetching users:', error);
+    res.status(500).json({ success: false, message: 'Error fetching users: ' + error.message });
   }
 });
 

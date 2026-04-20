@@ -72,13 +72,16 @@ router.post('/', protect, managerOrAdmin, async (req, res) => {
 // Get all bonuses (admin/manager)
 router.get('/all', protect, managerOrAdmin, async (req, res) => {
   try {
+    console.log('Fetching all bonuses...');
     const bonuses = await Bonus.find()
       .populate('employee', 'name department')
       .populate('givenBy', 'name')
       .sort({ createdAt: -1 });
-    res.json({ success: true, data: { bonuses } });
+    console.log('Found bonuses:', bonuses.length);
+    res.json({ success: true, data: bonuses });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Error fetching bonuses' });
+    console.error('Error fetching bonuses:', error);
+    res.status(500).json({ success: false, message: 'Error fetching bonuses: ' + error.message });
   }
 });
 
