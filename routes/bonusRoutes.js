@@ -3,7 +3,7 @@ const router = express.Router();
 const Bonus = require('../models/Bonus');
 const { User } = require('../models/User');
 const { Notification, NotificationType } = require('../models/Notification');
-const { protect, managerOrAdmin } = require('../middleware/authMiddleware');
+const { protect, adminOnly, managerOrAdmin } = require('../middleware/authMiddleware');
 
 // Get all bonuses for employee
 router.get('/employee/:employeeId', protect, async (req, res) => {
@@ -88,16 +88,11 @@ router.get('/all', protect, managerOrAdmin, async (req, res) => {
 });
 
 // Delete bonus (admin only)
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', protect, adminOnly, async (req, res) => {
   try {
     const bonus = await Bonus.findById(req.params.id);
     if (!bonus) {
       return res.status(404).json({ success: false, message: 'Bonus not found' });
-    }
-
-    // Only admin can delete bonuses
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
     await bonus.deleteOne();

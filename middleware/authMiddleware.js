@@ -7,7 +7,11 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models/User');
 
 // JWT secret key (should be in environment variables in production)
-const JWT_SECRET = process.env.JWT_SECRET || 'employee-task-management-secret-key-2024';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is required');
+}
 
 /**
  * Middleware to protect routes - requires valid JWT token

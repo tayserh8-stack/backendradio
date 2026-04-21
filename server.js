@@ -8,6 +8,7 @@
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+const crypto = require('crypto');
 const connectDB = require('./config/db');
 const { User } = require('./models/User');
 const { Settings } = require('./models/Settings');
@@ -51,7 +52,7 @@ const initializeData = async () => {
       await User.create({
         username: 'admin',
         email: 'admin@radio.com',
-        password: 'admin',
+        password: process.env.ADMIN_PASSWORD || crypto.randomBytes(16).toString('hex'),
         name: 'المدير العام',
         role: 'admin',
         department: null,

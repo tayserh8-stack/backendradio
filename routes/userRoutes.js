@@ -45,7 +45,7 @@ router.get('/department/:department', protect, managerOrAdmin, getEmployeesByDep
 router.get('/managers', protect, adminOnly, getAllManagers);
 
 // GET /api/users/rankings - Get employee rankings
-router.get('/rankings', protect, getRankings);
+router.get('/rankings', protect, adminOnly, getRankings);
 
 // GET /api/users/department-stats - Get department statistics
 router.get('/department-stats', protect, managerOrAdmin, getDepartmentStats);
