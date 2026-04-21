@@ -28,4 +28,6 @@ const bonusSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Bonus', bonusSchema);
+const Bonus = mongoose.model('Bonus', bonusSchema);
+
+module.exports = { Bonus };
