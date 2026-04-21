@@ -285,6 +285,9 @@ const updateProfile = async (req, res) => {
  */
 const updateProfileImage = async (req, res) => {
   try {
+    console.log('Update profile image - file:', req.file);
+    console.log('Update profile image - user:', req.user?._id);
+    
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -293,6 +296,13 @@ const updateProfileImage = async (req, res) => {
     }
 
     const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'المستخدم غير موجود'
+      });
+    }
+    
     user.profileImage = `/uploads/${req.file.filename}`;
     await user.save();
 
