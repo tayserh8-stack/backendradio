@@ -20,6 +20,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const bonusRoutes = require('./routes/bonusRoutes');
 const departmentRoutes = require('./routes/departmentRoutes');
+const messageRoutes = require('./routes/messageRoutes');
 
 // Initialize Express app
 const app = express();
@@ -74,6 +75,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/bonuses', bonusRoutes);
 app.use('/api/departments', departmentRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Health check endpoint (مهم لـ Render)
 app.get('/api/health', (req, res) => {
