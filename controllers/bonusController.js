@@ -2,7 +2,7 @@
  * Bonus Controller
  * Handles bonus management operations
  */
-const { Bonus } = require('../models/Bonus');
+const Bonus = require('../models/Bonus');
 const { User } = require('../models/User');
 const { Notification, NotificationType } = require('../models/Notification');
 

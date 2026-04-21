@@ -30,4 +30,4 @@ const bonusSchema = new mongoose.Schema({
 
 const Bonus = mongoose.model('Bonus', bonusSchema);
 
-module.exports = { Bonus };
+module.exports = Bonus;
