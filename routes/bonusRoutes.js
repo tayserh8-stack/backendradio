@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Bonus = require('../models/Bonus');
-const User = require('../models/User');
+const { User } = require('../models/User');
 const { Notification, NotificationType } = require('../models/Notification');
 const { protect, managerOrAdmin } = require('../middleware/authMiddleware');
 
