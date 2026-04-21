@@ -59,8 +59,8 @@ router.post('/:id/activate', protect, adminOnly, activateUser);
 // GET /api/users/:id - Get user by ID
 router.get('/:id', protect, getUserById);
 
-// POST /api/users - Create user (admin only)
-router.post('/', protect, adminOnly, createUser);
+// POST /api/users - Create user (admin or manager)
+router.post('/', protect, managerOrAdmin, createUser);
 
 // PUT /api/users/:id - Update user
 router.put('/:id', protect, adminOnly, updateUser);

@@ -153,6 +153,26 @@ const createUser = async (req, res) => {
       });
     }
 
+    // For manager role, restrict to their department only
+    if (req.user.role === 'manager') {
+      // Manager can only create employees (not other managers or admins)
+      if (role === 'manager' || role === 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'غير مصرح لك بإنشاء هذا الدور'
+        });
+      }
+      // Manager can only assign employees to their department
+      if (department && department !== req.user.department) {
+        return res.status(403).json({
+          success: false,
+          message: 'غير مصرح لك بإضافة موظفين لأقسام أخرى'
+        });
+      }
+      // Force department to be the manager's department
+      department = req.user.department;
+    }
+
     // Create user
     const user = await User.create({
       username,
