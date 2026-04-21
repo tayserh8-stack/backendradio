@@ -24,8 +24,8 @@ const { protect, adminOnly, managerOrAdmin } = require('../middleware/authMiddle
 // GET /api/users/employees - Get all employees
 router.get('/employees', protect, managerOrAdmin, getAllEmployees);
 
-// GET /api/users - Get all users (for admin/manager to give bonuses)
-router.get('/', protect, managerOrAdmin, async (req, res) => {
+// GET /api/users - Get all users (for messaging)
+router.get('/', protect, async (req, res) => {
   try {
     console.log('Fetching all users...');
     const { User } = require('../models/User');
@@ -42,7 +42,7 @@ router.get('/', protect, managerOrAdmin, async (req, res) => {
 router.get('/department/:department', protect, managerOrAdmin, getEmployeesByDepartment);
 
 // GET /api/users/managers - Get all managers
-router.get('/managers', protect, adminOnly, getAllManagers);
+router.get('/managers', protect, managerOrAdmin, getAllManagers);
 
 // GET /api/users/rankings - Get employee rankings
 router.get('/rankings', protect, adminOnly, getRankings);
