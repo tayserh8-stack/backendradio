@@ -7,10 +7,16 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models/User');
 
 // JWT secret key (should be in environment variables in production)
-const JWT_SECRET = process.env.JWT_SECRET;
+let JWT_SECRET = process.env.JWT_SECRET;
 
+// Allow fallback in development only with warning
 if (!JWT_SECRET) {
-  throw new Error('FATAL: JWT_SECRET environment variable is required');
+  if (process.env.NODE_ENV !== 'production') {
+    JWT_SECRET = 'dev-secret-key-2024';
+    console.warn('⚠️ WARNING: Using default JWT_SECRET. Set JWT_SECRET env var for production!');
+  } else {
+    throw new Error('FATAL: JWT_SECRET environment variable is required');
+  }
 }
 
 /**
