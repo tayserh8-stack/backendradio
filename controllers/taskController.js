@@ -670,17 +670,17 @@ const getDailySummary = async (req, res) => {
     const unusualTasks = filteredTasks.filter(t => t.isUnusual).length;
     const totalHours = filteredTasks.reduce((sum, t) => sum + (t.duration || 0), 0);
 
-    // 5. إرسال الاستجابة
+    // 5. إرسال الاستجابة (مع الحماية من undefined)
     res.status(200).json({
       success: true,
       data: {
         date: targetDate.toISOString().split('T')[0],
-        total: totalTasks,
-        completed: completedTasks,
-        inProgress: inProgressTasks,
-        pending: pendingTasks,
-        unusual: unusualTasks,
-        totalHours: totalHours
+        total: totalTasks || 0,
+        completed: completedTasks || 0,
+        inProgress: inProgressTasks || 0,
+        pending: pendingTasks || 0,
+        unusual: unusualTasks || 0,
+        totalHours: totalHours || 0
       }
     });
 
