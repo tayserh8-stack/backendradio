@@ -555,7 +555,30 @@ const activateUser = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('خطأ في تفعيل المستخدم:', error.message);
+    console.error('خطأ في تفعيل المستخدم:', error);
+    res.status(500).json({
+      success: false,
+      message: 'حدث خطأ في الخادم'
+    });
+  }
+};
+
+const getUserCounts = async (req, res) => {
+  try {
+    const [employees, managers] = await Promise.all([
+      User.countDocuments({ role: UserRole.EMPLOYEE }),
+      User.countDocuments({ role: UserRole.MANAGER })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        employees,
+        managers
+      }
+    });
+  } catch (error) {
+    console.error('خطأ في جلب عدد المستخدمين:', error);
     res.status(500).json({
       success: false,
       message: 'حدث خطأ في الخادم'
@@ -575,5 +598,6 @@ module.exports = {
   getRankings,
   getDepartmentStats,
   getPendingUsers,
-  activateUser
+  activateUser,
+  getUserCounts
 };

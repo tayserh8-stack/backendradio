@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const Message = require('../models/Message');
+const { Notification, NotificationType } = require('../models/Notification');
 const { protect } = require('../middleware/authMiddleware');
 
 // GET /api/messages/inbox - Get received messages
@@ -77,6 +78,14 @@ router.post('/', protect, async (req, res) => {
     
     await message.populate('sender', 'name email');
     await message.populate('receiver', 'name email role department');
+    
+    await Notification.createNotification(
+      receiverId,
+      NotificationType.NEW_MESSAGE,
+      'رسالة جديدة',
+      `لديك رسالة جديدة من ${req.user.name}: ${subject}`,
+      null
+    );
     
     res.status(201).json({
       success: true,

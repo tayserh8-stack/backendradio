@@ -14,7 +14,8 @@ const NotificationType = {
   TASK_REJECTED: 'task_rejected',
   NEW_USER_REGISTERED: 'new_user_registered',
   ROLE_CHANGE: 'role_change',
-  REWARD: 'reward'
+  REWARD: 'reward',
+  NEW_MESSAGE: 'new_message'
 };
 
 // Notification Schema

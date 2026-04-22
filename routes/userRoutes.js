@@ -17,7 +17,8 @@ const {
   getRankings,
   getDepartmentStats,
   getPendingUsers,
-  activateUser
+  activateUser,
+  getUserCounts
 } = require('../controllers/userController');
 const { protect, adminOnly, managerOrAdmin } = require('../middleware/authMiddleware');
 
@@ -52,6 +53,9 @@ router.get('/department-stats', protect, managerOrAdmin, getDepartmentStats);
 
 // GET /api/users/pending - Get pending users (admin only)
 router.get('/pending', protect, adminOnly, getPendingUsers);
+
+// GET /api/users/counts - Get user counts (employees and managers)
+router.get('/counts', protect, adminOnly, getUserCounts);
 
 // POST /api/users/:id/activate - Activate user (admin only)
 router.post('/:id/activate', protect, adminOnly, activateUser);

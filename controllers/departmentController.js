@@ -1,11 +1,15 @@
 const Department = require('../models/Department');
 
+const STATIC_DEPARTMENTS = ['production', 'news', 'marketing'];
+
 exports.getAllDepartments = async (req, res) => {
   try {
-    const departments = await Department.find().sort({ createdAt: -1 });
+    const customDepartments = await Department.find().sort({ createdAt: -1 });
+    const staticDepts = STATIC_DEPARTMENTS.map(name => ({ name, _id: name, isStatic: true }));
+    const allDepartments = [...staticDepts, ...customDepartments];
     res.json({
       success: true,
-      data: { departments }
+      data: { departments: allDepartments, totalCount: allDepartments.length }
     });
   } catch (error) {
     res.status(500).json({

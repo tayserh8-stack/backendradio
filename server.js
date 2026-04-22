@@ -22,6 +22,8 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const bonusRoutes = require('./routes/bonusRoutes');
 const departmentRoutes = require('./routes/departmentRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const managerEvaluationRoutes = require('./routes/managerEvaluationRoutes');
+const wellBeingRoutes = require('./routes/wellBeingRoutes');
 
 // Initialize Express app
 const app = express();
@@ -77,6 +79,8 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/bonuses', bonusRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/manager-evaluation', managerEvaluationRoutes);
+app.use('/api/well-being', wellBeingRoutes);
 
 // Health check endpoint (مهم لـ Render)
 app.get('/api/health', (req, res) => {
