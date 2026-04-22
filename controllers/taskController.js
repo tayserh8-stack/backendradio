@@ -610,41 +610,54 @@ const getTotalTasks = async (req, res) => {
 const getDailySummary = async (req, res) => {
   try {
     const { date } = req.query;
-    const targetDate = date ? new Date(date) : new Date();
-    targetDate.setHours(0, 0, 0, 0);
+    let tasks;
     
-    const nextDate = new Date(targetDate);
-    nextDate.setDate(nextDate.getDate() + 1);
-
-    const tasks = await Task.find({
-      taskDate: {
-        $gte: targetDate,
-        $lt: nextDate
+    try {
+      if (date) {
+        const targetDate = new Date(date);
+        targetDate.setHours(0, 0, 0, 0);
+        const nextDate = new Date(targetDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+        
+        tasks = await Task.find({
+          taskDate: {
+            $gte: targetDate,
+            $lt: nextDate
+          }
+        }).populate('assignedTo', 'name');
+      } else {
+        tasks = await Task.find().populate('assignedTo', 'name');
       }
-    }).populate('assignedTo', 'name');
+    } catch (e) {
+      tasks = await Task.find().populate('assignedTo', 'name');
+    }
 
     // Filter based on user role
     let filteredTasks = tasks;
-    if (req.user.role === 'employee') {
-      filteredTasks = tasks.filter(t => 
-        t.assignedTo.some(a => a._id.toString() === req.user._id.toString())
-      );
-    } else if (req.user.role === 'manager') {
-      const deptEmployees = await User.find({
-        role: 'employee',
-        department: req.user.department
-      }).select('_id');
-      const deptEmployeeIds = deptEmployees.map(e => e._id);
-      filteredTasks = tasks.filter(t => 
-        t.assignedTo.some(a => deptEmployeeIds.includes(a._id.toString()))
-      );
+    try {
+      if (req.user.role === 'employee') {
+        filteredTasks = tasks.filter(t => 
+          t.assignedTo && t.assignedTo.some(a => a._id && a._id.toString() === req.user._id.toString())
+        );
+      } else if (req.user.role === 'manager') {
+        const deptEmployees = await User.find({
+          role: 'employee',
+          department: req.user.department
+        }).select('_id');
+        const deptEmployeeIds = deptEmployees.map(e => e._id.toString());
+        filteredTasks = tasks.filter(t => 
+          t.assignedTo && t.assignedTo.some(a => a._id && deptEmployeeIds.includes(a._id.toString()))
+        );
+      }
+    } catch (e) {
+      console.error('Filter error:', e.message);
     }
 
     const summary = {
       total: filteredTasks.length,
-      completed: filteredTasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.APPROVED || t.status === TaskStatus.FINAL_APPROVED).length,
-      inProgress: filteredTasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length,
-      pending: filteredTasks.filter(t => t.status === TaskStatus.PENDING).length,
+      completed: filteredTasks.filter(t => t.status === 'completed' || t.status === 'approved' || t.status === 'final_approved').length,
+      inProgress: filteredTasks.filter(t => t.status === 'in_progress').length,
+      pending: filteredTasks.filter(t => t.status === 'pending').length,
       unusual: filteredTasks.filter(t => t.isUnusual).length,
       totalHours: filteredTasks.reduce((sum, t) => sum + (t.duration || 0), 0)
     };

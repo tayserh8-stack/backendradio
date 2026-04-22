@@ -62,7 +62,6 @@ const userSchema = new mongoose.Schema({
   // Department (for employees and managers)
   department: {
     type: String,
-    enum: Object.values(Department),
     default: null
   },
   

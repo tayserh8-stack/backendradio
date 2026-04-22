@@ -222,8 +222,15 @@ const updateUser = async (req, res) => {
     // Update fields
     if (name) user.name = name;
     if (phone) user.phone = phone;
-    if (department) user.department = department;
+    if (department !== undefined) user.department = department || null;
     if (role) {
+      // If changing to manager, require department
+      if (role === 'manager' && !department && !user.department) {
+        return res.status(400).json({
+          success: false,
+          message: 'يجب تحديد القسم عند تعيين مدير قسم'
+        });
+      }
       if (user.role !== role) {
         roleChanged = true;
       }
@@ -231,7 +238,15 @@ const updateUser = async (req, res) => {
     }
     if (isActive !== undefined) user.isActive = isActive;
 
-    await user.save();
+    try {
+      await user.save();
+    } catch (saveError) {
+      console.error('Save error:', saveError.message);
+      return res.status(400).json({
+        success: false,
+        message: 'خطأ في الحفظ: ' + saveError.message
+      });
+    }
 
     // Create notification for role change
     if (roleChanged) {

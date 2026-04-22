@@ -4,6 +4,7 @@ const Bonus = require('../models/Bonus');
 const { User } = require('../models/User');
 const { Notification, NotificationType } = require('../models/Notification');
 const { protect, adminOnly, managerOrAdmin } = require('../middleware/authMiddleware');
+const { deleteBonus, approveBonus } = require('../controllers/bonusController');
 
 // Get all bonuses for employee
 router.get('/employee/:employeeId', protect, async (req, res) => {
@@ -87,19 +88,10 @@ router.get('/all', protect, managerOrAdmin, async (req, res) => {
   }
 });
 
-// Delete bonus (admin only)
-router.delete('/:id', protect, adminOnly, async (req, res) => {
-  try {
-    const bonus = await Bonus.findById(req.params.id);
-    if (!bonus) {
-      return res.status(404).json({ success: false, message: 'Bonus not found' });
-    }
+// Delete bonus (admin/manager within 24h)
+router.delete('/:id', protect, deleteBonus);
 
-    await bonus.deleteOne();
-    res.json({ success: true, message: 'Bonus deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Error deleting bonus' });
-  }
-});
+// Approve bonus (admin only)
+router.put('/:id/approve', protect, adminOnly, approveBonus);
 
 module.exports = router;

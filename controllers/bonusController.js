@@ -93,8 +93,10 @@ const createBonus = async (req, res) => {
 };
 
 /**
- * Delete bonus (admin only)
+ * Delete bonus
  * DELETE /api/bonuses/:id
+ * - Admin can delete any bonus anytime
+ * - Manager can delete their own bonus within 1 day (24 hours)
  */
 const deleteBonus = async (req, res) => {
   try {
@@ -104,16 +106,59 @@ const deleteBonus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Bonus not found' });
     }
     
-    // Only admin can delete bonuses
+    const userRole = req.user.role;
+    const userId = req.user._id.toString();
+    const givenById = bonus.givenBy?.toString();
+    const bonusCreatedAt = new Date(bonus.createdAt);
+    const now = new Date();
+    const hoursSinceCreation = (now - bonusCreatedAt) / (1000 * 60 * 60);
+    
+    // Admin can delete any bonus
+    if (userRole === 'admin') {
+      await bonus.deleteOne();
+      return res.json({ success: true, message: 'Bonus deleted successfully' });
+    }
+    
+    // Manager can delete their own bonus within 24 hours
+    if (userRole === 'manager' && givenById === userId) {
+      if (hoursSinceCreation > 24) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Cannot delete after 24 hours. Contact admin to delete.' 
+        });
+      }
+      await bonus.deleteOne();
+      return res.json({ success: true, message: 'Bonus deleted successfully' });
+    }
+    
+    return res.status(403).json({ success: false, message: 'Not authorized' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error deleting bonus' });
+  }
+};
+
+/**
+ * Approve bonus (admin only)
+ * PUT /api/bonuses/:id/approve
+ */
+const approveBonus = async (req, res) => {
+  try {
+    const bonus = await Bonus.findById(req.params.id);
+    
+    if (!bonus) {
+      return res.status(404).json({ success: false, message: 'Bonus not found' });
+    }
+    
     if (req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
     
-    await bonus.deleteOne();
+    bonus.isApproved = true;
+    await bonus.save();
     
-    res.json({ success: true, message: 'Bonus deleted successfully' });
+    res.json({ success: true, message: 'Bonus approved successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Error deleting bonus' });
+    res.status(500).json({ success: false, message: 'Error approving bonus' });
   }
 };
 
@@ -121,5 +166,6 @@ module.exports = {
   getBonusesByEmployee,
   getAllBonuses,
   createBonus,
-  deleteBonus
+  deleteBonus,
+  approveBonus
 };

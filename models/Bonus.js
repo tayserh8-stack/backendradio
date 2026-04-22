@@ -25,6 +25,10 @@ const bonusSchema = new mongoose.Schema({
     type: String,
     enum: ['reward', 'prize', 'bonus'],
     default: 'reward'
+  },
+  isApproved: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 
