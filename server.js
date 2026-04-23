@@ -29,17 +29,25 @@ const wellBeingRoutes = require('./routes/wellBeingRoutes');
 const app = express();
 
 // === إعدادات CORS للسحابة ===
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
+// ✅ Fixed: CORS configuration for Netlify domain
+const corsOptions = {
+  origin: 'https://radioalthawra.netlify.app',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Origin', 'X-Requested-With', 'Content-Type',
+    'Accept', 'Authorization'
+  ],
+  exposedHeaders: [
+    'Content-Length', 'X-Request-Id', 'X-Total-Count'
+  ],
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
