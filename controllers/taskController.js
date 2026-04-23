@@ -607,82 +607,47 @@ const getTotalTasks = async (req, res) => {
  * Get daily tasks summary
  * GET /api/tasks/summary/daily
  */
-// @desc    Get daily tasks summary
-// @route   GET /api/tasks/summary/daily
-// @access  Private
 const getDailySummary = async (req, res) => {
   try {
-    // 1. تحديد التاريخ المستهدف
-    // إذا أرسل المستخدم تاريخاً في Query Params استخدمه، وإلا استخدم تاريخ اليوم
-    let targetDate = req.query.date ? new Date(req.query.date) : new Date();
+    const { date } = req.query;
+    const targetDate = date ? new Date(date) : new Date();
+    targetDate.setHours(0, 0, 0, 0);
     
-    // التأكد من صحة التاريخ
-    if (isNaN(targetDate.getTime())) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid date format'
-      });
-    }
+    const nextDate = new Date(targetDate);
+    nextDate.setDate(nextDate.getDate() + 1);
 
-    // ضبط الوقت لبداية اليوم ونهايته للمقارنة الصحيحة
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    // 2. جلب المهام لهذا اليوم
     const tasks = await Task.find({
-      createdAt: {
-        $gte: startOfDay,
-        $lte: endOfDay
+      taskDate: {
+        $gte: targetDate,
+        $lt: nextDate
       }
-    }).populate('assignedTo', 'name department');
+    }).populate('assignedTo', 'name');
 
-    // 3. فلتر المهام حسب دور المستخدم المسجل
+    // Filter based on user role
     let filteredTasks = tasks;
-    
     if (req.user.role === 'employee') {
-      // الموظف يرى مهامه فقط
       filteredTasks = tasks.filter(t => 
-        t.assignedTo?.some(a => a._id.toString() === req.user._id.toString())
+        t.assignedTo.some(a => a._id.toString() === req.user._id.toString())
       );
     } else if (req.user.role === 'manager') {
-      // المدير يرى مهام قسمه فقط
       const deptEmployees = await User.find({
         role: 'employee',
         department: req.user.department
       }).select('_id');
-      const deptIds = deptEmployees.map(e => e._id.toString());
-      
+      const deptEmployeeIds = deptEmployees.map(e => e._id);
       filteredTasks = tasks.filter(t => 
-        t.assignedTo?.some(a => deptIds.includes(a._id.toString()))
+        t.assignedTo.some(a => deptEmployeeIds.includes(a._id.toString()))
       );
     }
 
-    // 4. حساب الملخص
-    const totalTasks = filteredTasks.length;
-    const completedTasks = filteredTasks.filter(t => 
-      ['completed', 'approved', 'final_approved'].includes(t.status)
-    ).length;
-    const inProgressTasks = filteredTasks.filter(t => t.status === 'in_progress').length;
-    const pendingTasks = filteredTasks.filter(t => t.status === 'pending').length;
-    const unusualTasks = filteredTasks.filter(t => t.isUnusual).length;
-    const totalHours = filteredTasks.reduce((sum, t) => sum + (t.duration || 0), 0);
-
-    // 5. إرسال الاستجابة (مع الحماية من undefined)
-    res.status(200).json({
-      success: true,
-      data: {
-        date: targetDate.toISOString().split('T')[0],
-        total: totalTasks || 0,
-        completed: completedTasks || 0,
-        inProgress: inProgressTasks || 0,
-        pending: pendingTasks || 0,
-        unusual: unusualTasks || 0,
-        totalHours: totalHours || 0
-      }
-    });
+    const summary = {
+      total: filteredTasks.length,
+      completed: filteredTasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.APPROVED || t.status === TaskStatus.FINAL_APPROVED).length,
+      inProgress: filteredTasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length,
+      pending: filteredTasks.filter(t => t.status === TaskStatus.PENDING).length,
+      unusual: filteredTasks.filter(t => t.isUnusual).length,
+      totalHours: filteredTasks.reduce((sum, t) => sum + (t.duration || 0), 0)
+    };
 
     res.json({
       success: true,
