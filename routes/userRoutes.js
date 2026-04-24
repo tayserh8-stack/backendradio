@@ -18,7 +18,8 @@ const {
   getDepartmentStats,
   getPendingUsers,
   activateUser,
-  getUserCounts
+  getUserCounts,
+  changePassword
 } = require('../controllers/userController');
 const { protect, adminOnly, managerOrAdmin } = require('../middleware/authMiddleware');
 
@@ -65,6 +66,9 @@ router.get('/:id', protect, getUserById);
 
 // POST /api/users - Create user (admin or manager)
 router.post('/', protect, managerOrAdmin, createUser);
+
+// PUT /api/users/change-password - Change password (authenticated user)
+router.put('/change-password', protect, changePassword);
 
 // PUT /api/users/:id - Update user
 router.put('/:id', protect, adminOnly, updateUser);

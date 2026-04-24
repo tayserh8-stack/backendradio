@@ -601,6 +601,65 @@ const getUserCounts = async (req, res) => {
   }
 };
 
+/**
+ * Change password
+ * PUT /api/users/change-password
+ */
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى ملء جميع الحقول'
+      });
+    }
+
+    // Validate new password length
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'يجب أن تكون كلمة المرور الجديدة على الأقل 6 أحرف'
+      });
+    }
+
+    // Get user from database (we have req.user from protect middleware)
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'المستخدم غير موجود'
+      });
+    }
+
+    // Check if current password matches
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'كلمة المرور الحالية غير صحيحة'
+      });
+    }
+
+    // Hash new password and save
+    user.password = newPassword;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'تم تغيير كلمة المرور بنجاح'
+    });
+  } catch (error) {
+    console.error('خطأ في تغيير كلمة المرور:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'حدث خطأ في الخادم'
+    });
+  }
+};
+
 module.exports = {
   getAllEmployees,
   getEmployeesByDepartment,
@@ -614,5 +673,6 @@ module.exports = {
   getDepartmentStats,
   getPendingUsers,
   activateUser,
-  getUserCounts
+  getUserCounts,
+  changePassword
 };

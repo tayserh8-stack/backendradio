@@ -9,6 +9,8 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const crypto = require('crypto');
+const dotenv = require('dotenv');
+dotenv.config();
 const connectDB = require('./config/db');
 const { User } = require('./models/User');
 const { Settings } = require('./models/Settings');
@@ -29,9 +31,25 @@ const wellBeingRoutes = require('./routes/wellBeingRoutes');
 const app = express();
 
 // === إعدادات CORS للسحابة ===
-// ✅ Fixed: CORS configuration for Netlify domain
+// ✅ Fixed: CORS configuration for Netlify domain and localhost development
 const corsOptions = {
-  origin: 'https://radioalthawra.netlify.app',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow specific origins
+    const allowedOrigins = [
+      'https://radioalthawra.netlify.app',
+      'http://localhost:5173',
+      'http://127.0.0.1:5173'
+    ];
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
