@@ -14,6 +14,8 @@ dotenv.config();
 const connectDB = require('./config/db');
 const { User } = require('./models/User');
 const { Settings } = require('./models/Settings');
+const { Prompt } = require('./models/Prompt');
+const { seedDefaultDepartments } = require('./controllers/departmentController');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -26,6 +28,16 @@ const departmentRoutes = require('./routes/departmentRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const managerEvaluationRoutes = require('./routes/managerEvaluationRoutes');
 const wellBeingRoutes = require('./routes/wellBeingRoutes');
+const payrollRoutes = require('./routes/payrollRoutes');
+const attendanceRoutes = require('./routes/attendanceRoutes');
+const leaveRoutes = require('./routes/leaveRoutes');
+const editorialPipelineRoutes = require('./routes/editorialPipelineRoutes');
+const coupletPipelineRoutes = require('./routes/coupletPipelineRoutes');
+const promptRoutes = require('./routes/promptRoutes');
+const documentRoutes = require('./routes/documentRoutes');
+const auditLogRoutes = require('./routes/auditLogRoutes');
+const recruitmentPerformanceRoutes = require('./routes/recruitmentPerformanceRoutes');
+const coupletPromptRoutes = require('./routes/coupletPromptRoutes');
 
 // Initialize Express app
 const app = express();
@@ -40,8 +52,8 @@ const corsOptions = {
     // Allow specific origins
     const allowedOrigins = [
       'https://radioalthawra.netlify.app',
-      'http://localhost:5173',
-      'http://127.0.0.1:5173'
+      'http://127.0.0.1:5173',
+      'http://localhost:5173'
     ];
     
     if (allowedOrigins.includes(origin)) {
@@ -64,9 +76,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Handle preflight requests
-app.options('*', cors(corsOptions));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -75,6 +84,26 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Connect to database
 connectDB();
+
+// Serve static fonts from frontend/dist/fonts with correct MIME types and CORS headers
+app.use('/fonts', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  next();
+}, express.static(path.join(__dirname, '..', 'frontend', 'dist', 'fonts'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.ttf')) {
+      res.setHeader('Content-Type', 'font/ttf');
+    } else if (filePath.endsWith('.woff')) {
+      res.setHeader('Content-Type', 'font/woff');
+    } else if (filePath.endsWith('.woff2')) {
+      res.setHeader('Content-Type', 'font/woff2');
+    } else if (filePath.endsWith('.otf')) {
+      res.setHeader('Content-Type', 'font/otf');
+    }
+  }
+}));
 
 // Initialize default data
 const initializeData = async () => {
@@ -96,6 +125,12 @@ const initializeData = async () => {
 
     // Initialize default settings
     await Settings.initializeDefaults();
+
+    // Seed default departments
+    await seedDefaultDepartments();
+
+    // Seed default editorial prompts
+    await Prompt.seedDefaults();
   } catch (error) {
     console.error('خطأ في تهيئة البيانات:', error.message);
   }
@@ -112,6 +147,16 @@ app.use('/api/departments', departmentRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/manager-evaluation', managerEvaluationRoutes);
 app.use('/api/well-being', wellBeingRoutes);
+app.use('/api/payroll', payrollRoutes);
+app.use('/api/attendance', attendanceRoutes);
+app.use('/api/leave', leaveRoutes);
+app.use('/api/editorial-pipeline', editorialPipelineRoutes);
+app.use('/api/couplet-pipeline', coupletPipelineRoutes);
+app.use('/api/prompts', promptRoutes);
+app.use('/api/couplet-prompts', coupletPromptRoutes);
+app.use('/api/documents', documentRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/recruitment', recruitmentPerformanceRoutes);
 
 // Health check endpoint (مهم لـ Render)
 app.get('/api/health', (req, res) => {
@@ -123,12 +168,18 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Swagger/OpenAPI documentation endpoint
+app.get('/api/docs', (req, res) => {
+  res.json(require('./swagger.json'));
+});
+
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
     message: '🚀 Employee Task Management API is running',
     version: '1.0.0',
-    docs: '/api/health'
+    docs: '/api/health',
+    swagger: '/api/docs'
   });
 });
 
