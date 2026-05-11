@@ -471,15 +471,12 @@ const getRankings = async (req, res) => {
  */
 const getDepartmentStats = async (req, res) => {
   try {
-    const dbDepartments = await Department.find().sort({ createdAt: -1 });
-    
-    const staticDepts = ['production', 'news', 'marketing'];
-    const allDepts = [...staticDepts.map(d => ({ name: d, _id: d })), ...dbDepartments];
-    
+    const departments = await Department.find().sort({ createdAt: -1 });
+
     const stats = [];
 
-    for (const dept of allDepts) {
-      const deptName = dept.name || dept;
+    for (const dept of departments) {
+      const deptName = dept.name;
       
       const employees = await User.find({ 
         role: UserRole.EMPLOYEE,

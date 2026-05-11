@@ -12,6 +12,14 @@ const departmentSchema = new mongoose.Schema({
     type: String,
     default: '#3B82F6'
   },
+  isSystem: {
+    type: Boolean,
+    default: false
+  },
+  description: {
+    type: String,
+    default: ''
+  },
   createdAt: {
     type: Date,
     default: Date.now

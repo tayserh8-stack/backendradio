@@ -61,7 +61,16 @@ settingsSchema.statics.initializeDefaults = async function() {
     { key: 'hoursWeight', value: 0.2, description: 'وزن ساعات العمل' },
     { key: 'tasksWeight', value: 0.3, description: 'وزن المهام المكتملة' },
     { key: 'requiredHoursPerWeek', value: 40, description: 'الساعات المطلوبة أسبوعياً' },
-    { key: 'minimumTasksForRanking', value: 5, description: 'الحد الأدنى من المهام للترتيب' }
+    { key: 'minimumTasksForRanking', value: 5, description: 'الحد الأدنى من المهام للترتيب' },
+    { key: 'leaveAnnualDays', value: 30, description: 'عدد أيام الإجازة السنوية' },
+    { key: 'leaveSickDays', value: 15, description: 'عدد أيام الإجازة المرضية' },
+    { key: 'leaveEmergencyDays', value: 5, description: 'عدد أيام الإجازة الطارئة' },
+    { key: 'leaveMaternityDays', value: 90, description: 'عدد أيام إجازة الوضع' },
+    { key: 'leavePaternityDays', value: 15, description: 'عدد أيام إجازة الأبوة' },
+    { key: 'leaveMaxConsecutiveDays', value: 30, description: 'الحد الأقصى للأيام المتتالية' },
+    { key: 'leaveMinNoticeDays', value: 1, description: 'الحد الأدنى للإشعار المسبق (أيام)' },
+    { key: 'leaveAllowHalfDay', value: true, description: 'السماح بنصف يوم إجازة' },
+    { key: 'leaveWeekendCounting', value: false, description: 'احتساب عطلة نهاية الأسبوع ضمن الإجازة' },
   ];
   
   for (const setting of defaults) {

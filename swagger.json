@@ -1,0 +1,345 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "HRMS - نظام إدارة الموارد البشرية",
+    "description": "API لإدارة الإجازات، الرواتب، المهام، والحضور",
+    "version": "1.0.0",
+    "contact": { "name": "HRMS Team" }
+  },
+  "servers": [
+    { "url": "/api", "description": "API Server" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "schemas": {
+      "LeaveRequest": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "employee": { "type": "string" },
+          "type": { "type": "string", "enum": ["annual","sick","maternity","unpaid","hourly","mission","overtime","attendance_correction"] },
+          "startDate": { "type": "string", "format": "date" },
+          "endDate": { "type": "string", "format": "date" },
+          "startTime": { "type": "string" },
+          "endTime": { "type": "string" },
+          "days": { "type": "number" },
+          "hours": { "type": "number" },
+          "reason": { "type": "string" },
+          "status": { "type": "string", "enum": ["draft","pending_manager","pending_general_manager","approved","rejected","cancelled","synced_to_payroll"] },
+          "missionType": { "type": "string", "enum": ["internal","external"] },
+          "visitParty": { "type": "string" },
+          "transportAllowance": { "type": "number" },
+          "overtimeHours": { "type": "number" },
+          "estimatedAmount": { "type": "number" },
+          "payrollItemId": { "type": "string" }
+        }
+      },
+      "PayrollItem": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "employee": { "type": "string" },
+          "type": { "type": "string", "enum": ["leave","mission","overtime","attendance_correction","other"] },
+          "direction": { "type": "string", "enum": ["addition","deduction"] },
+          "amount": { "type": "number" },
+          "currency": { "type": "string" },
+          "payrollCode": { "type": "string" },
+          "sourceType": { "type": "string" },
+          "sourceModel": { "type": "string" },
+          "sourceId": { "type": "string" },
+          "payrollPeriod": { "type": "string" },
+          "idempotencyKey": { "type": "string" },
+          "status": { "type": "string", "enum": ["pending","active","processed","cancelled"] }
+        }
+      },
+      "Payslip": {
+        "type": "object",
+        "properties": {
+          "payslipNumber": { "type": "string" },
+          "periodStart": { "type": "string" },
+          "periodEnd": { "type": "string" },
+          "employeeInfo": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "department": { "type": "string" },
+              "email": { "type": "string" }
+            }
+          },
+          "income": {
+            "type": "object",
+            "properties": {
+              "baseSalary": { "type": "number" },
+              "allowances": { "type": "array", "items": { "$ref": "#/components/schemas/Allowance" } },
+              "overtime": {
+                "type": "object",
+                "properties": {
+                  "approved": { "type": "array", "items": { "$ref": "#/components/schemas/PayrollItem" } },
+                  "totalOvertimeAmount": { "type": "number" }
+                }
+              },
+              "missions": {
+                "type": "object",
+                "properties": {
+                  "approved": { "type": "array" },
+                  "totalMissionAllowance": { "type": "number" }
+                }
+              }
+            }
+          },
+          "deductions": {
+            "type": "object",
+            "properties": {
+              "unpaidLeave": { "$ref": "#/components/schemas/DeductionGroup" },
+              "hourlyShortfall": { "$ref": "#/components/schemas/DeductionGroup" }
+            }
+          },
+          "totals": {
+            "type": "object",
+            "properties": {
+              "gross": { "type": "number" },
+              "deductions": { "type": "number" },
+              "net": { "type": "number" }
+            }
+          },
+          "leaveBalances": {
+            "type": "object",
+            "properties": {
+              "remainingBalance": { "type": "number" },
+              "totalBalance": { "type": "number" }
+            }
+          },
+          "isDraft": { "type": "boolean" }
+        }
+      },
+      "DeductionGroup": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/PayrollItem" } },
+          "total": { "type": "number" }
+        }
+      },
+      "Allowance": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "amount": { "type": "number" },
+          "description": { "type": "string" }
+        }
+      },
+      "CompensationResult": {
+        "type": "object",
+        "properties": {
+          "amount": { "type": "number" },
+          "currency": { "type": "string", "default": "SAR" },
+          "payrollCode": { "type": "string" },
+          "isDeduction": { "type": "boolean" },
+          "breakdown": { "type": "object" }
+        }
+      },
+      "ValidationResult": {
+        "type": "object",
+        "properties": {
+          "valid": { "type": "boolean" },
+          "errors": { "type": "array", "items": { "type": "string" } },
+          "warnings": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/leave": {
+      "post": {
+        "tags": ["الإجازات"],
+        "summary": "إنشاء طلب إجازة جديد",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": { "type": "string", "enum": ["annual","sick","maternity","unpaid","hourly","mission","overtime","attendance_correction"] },
+                  "startDate": { "type": "string" },
+                  "endDate": { "type": "string" },
+                  "startTime": { "type": "string" },
+                  "endTime": { "type": "string" },
+                  "reason": { "type": "string" },
+                  "missionType": { "type": "string" },
+                  "visitParty": { "type": "string" },
+                  "transportAllowance": { "type": "number" },
+                  "overtimeHours": { "type": "number" }
+                },
+                "required": ["type", "reason"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "تم إنشاء الطلب بنجاح" },
+          "400": { "description": "خطأ في البيانات المدخلة" },
+          "500": { "description": "خطأ في الخادم" }
+        }
+      },
+      "get": {
+        "tags": ["الإجازات"],
+        "summary": "قائمة طلبات الإجازة للموظف الحالي",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "type", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "قائمة الطلبات" } }
+      }
+    },
+    "/leave/validate": {
+      "post": {
+        "tags": ["الإجازات"],
+        "summary": "التحقق الفوري من صلاحية الطلب",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": { "type": "string" },
+                  "startDate": { "type": "string" },
+                  "endDate": { "type": "string" },
+                  "startTime": { "type": "string" },
+                  "endTime": { "type": "string" },
+                  "hours": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "نتيجة التحقق", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ValidationResult" } } } }
+        }
+      }
+    },
+    "/leave/balance": {
+      "get": {
+        "tags": ["الإجازات"],
+        "summary": "أرصدة الإجازات للموظف الحالي",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "الأرصدة" } }
+      }
+    },
+    "/leave/{id}/status": {
+      "put": {
+        "tags": ["الإجازات"],
+        "summary": "تحديث حالة الطلب (اعتماد/رفض)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string", "enum": ["approved","rejected","pending_general_manager","synced_to_payroll"] },
+                  "rejectionReason": { "type": "string" },
+                  "managerNotes": { "type": "string" }
+                },
+                "required": ["status"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "تم تحديث الحالة - عند الاعتماد يتم إنشاء PayrollItem ومزامنة الراتب" },
+          "403": { "description": "غير مصرح" }
+        }
+      }
+    },
+    "/payroll/payslip/current": {
+      "get": {
+        "tags": ["الرواتب"],
+        "summary": "كشف الراتب الحالي مع تفاصيل التعويضات",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "period", "in": "query", "schema": { "type": "string", "pattern": "^\\d{4}-\\d{2}$" }, "description": "الفترة بصيغة YYYY-MM (اختياري)" }
+        ],
+        "responses": {
+          "200": {
+            "description": "بيانات كشف الراتب مع تفصيل الدخل والخصومات",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "payslip": { "$ref": "#/components/schemas/Payslip" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payroll/{id}/payslip/export": {
+      "get": {
+        "tags": ["الرواتب"],
+        "summary": "تصدير كشف الراتب مع توقيع رقمي",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "بيانات التصدير بتوقيع رقمي SHA-256" } }
+      }
+    },
+    "/payroll/generate": {
+      "post": {
+        "tags": ["الرواتب"],
+        "summary": "إنشاء راتب جديد للموظف",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "employeeId": { "type": "string" },
+                  "periodStart": { "type": "string" },
+                  "periodEnd": { "type": "string" },
+                  "baseSalary": { "type": "number" },
+                  "allowances": { "type": "array", "items": { "$ref": "#/components/schemas/Allowance" } },
+                  "overtime": {
+                    "type": "object",
+                    "properties": {
+                      "hours": { "type": "number" },
+                      "hourlyRate": { "type": "number" }
+                    }
+                  }
+                },
+                "required": ["employeeId", "periodStart", "periodEnd"]
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "تم إنشاء الراتب" } }
+      }
+    },
+    "/payroll/pending-assignments": {
+      "get": {
+        "tags": ["الرواتب"],
+        "summary": "طلبات الرواتب المعلقة (HR)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "قائمة الرواتب المعلقة" } }
+      }
+    }
+  }
+}

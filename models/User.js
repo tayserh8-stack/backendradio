@@ -15,9 +15,13 @@ const UserRole = {
 
 // Define departments
 const Department = {
-  PRODUCTION: 'production',
+  FINANCIAL: 'financial',
+  IT: 'it',
+  MARKETING: 'marketing',
   NEWS: 'news',
-  MARKETING: 'marketing'
+  PRODUCTION: 'production',
+  LIVE_BROADCAST: 'live_broadcast',
+  HR: 'hr'
 };
 
 // User Schema
