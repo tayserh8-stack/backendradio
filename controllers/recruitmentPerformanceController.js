@@ -9,6 +9,7 @@ const PerformanceReview = require('../models/RecruitmentPerformance').Performanc
 const KPI = require('../models/RecruitmentPerformance').KPI;
 const { User } = require('../models/User');
 const { Notification, NotificationType } = require('../models/Notification');
+const Department = require('../models/Department');
 
 /**
  * ======================
@@ -106,9 +107,19 @@ const getJobPostings = async (req, res) => {
     const query = {};
     
     if (status) query.status = status;
-    if (department) query.department = department;
     if (level) query.level = level;
     if (jobType) query.jobType = jobType;
+    
+    if (department) {
+      const deptDoc = await Department.findOne({ name: department });
+      if (!deptDoc) {
+        return res.status(404).json({
+          success: false,
+          message: 'القسم غير موجود'
+        });
+      }
+      query.department = deptDoc._id;
+    }
     
     if (search) {
       query.$or = [
@@ -121,7 +132,8 @@ const getJobPostings = async (req, res) => {
     if (req.user.role === 'manager') {
       const user = await User.findById(req.user._id);
       if (user?.department) {
-        query.department = user.department;
+        const deptDoc = await Department.findOne({ name: user.department });
+        if (deptDoc) query.department = deptDoc._id;
       }
     }
 
@@ -492,6 +504,7 @@ const getApplications = async (req, res) => {
     const {
       status,
       jobPostingId,
+      department,
       search,
       page = 1,
       limit = 20
@@ -509,14 +522,30 @@ const getApplications = async (req, res) => {
       ];
     }
 
-    // Filter by department for managers
+    if (department) {
+      const deptDoc = await Department.findOne({ name: department });
+      if (!deptDoc) {
+        return res.status(404).json({
+          success: false,
+          message: 'القسم غير موجود'
+        });
+      }
+      const jobPostings = await JobPosting.find({
+        department: deptDoc._id
+      }).select('_id');
+      query.jobPosting = { $in: jobPostings.map(j => j._id) };
+    }
+
     if (req.user.role === 'manager') {
       const user = await User.findById(req.user._id);
       if (user?.department) {
-        const jobPostings = await JobPosting.find({ 
-          department: user.department 
-        }).select('_id');
-        query.jobPosting = { $in: jobPostings.map(j => j._id) };
+        const deptDoc = await Department.findOne({ name: user.department });
+        if (deptDoc) {
+          const jobPostings = await JobPosting.find({
+            department: deptDoc._id
+          }).select('_id');
+          query.jobPosting = { $in: jobPostings.map(j => j._id) };
+        }
       }
     }
 

@@ -246,8 +246,22 @@ const getAllPayrolls = async (req, res) => {
       query.status = status;
     }
 
-    if (department) {
-      query.department = department;
+    if (department && !employeeId) {
+      const employees = await User.find({ department }).select('_id');
+      if (employees.length === 0) {
+        return res.json({
+          success: true,
+          data: {
+            payrolls: [],
+            pagination: {
+              currentPage: parseInt(page),
+              totalPages: 0,
+              totalItems: 0
+            }
+          }
+        });
+      }
+      query.employee = { $in: employees.map(e => e._id) };
     }
 
     if (month && year) {
@@ -1225,7 +1239,11 @@ const getCurrentPayslip = async (req, res) => {
           items: deductions.filter(i => i.payrollCode === 'LEAVE_HOURLY_PARTIAL_UNPAID' || i.payrollCode === 'LEAVE_HOURLY_DEDUCTION'),
           total: deductions.filter(i => i.payrollCode === 'LEAVE_HOURLY_PARTIAL_UNPAID' || i.payrollCode === 'LEAVE_HOURLY_DEDUCTION').reduce((s, i) => s + i.amount, 0),
         },
-        otherDeductions: payroll.deductions?.other || [],
+        hoursShortfall: {
+          items: (payroll.deductions?.other || []).filter(d => d.type === 'fine'),
+          total: (payroll.deductions?.other || []).filter(d => d.type === 'fine').reduce((s, d) => s + (d.amount || 0), 0),
+        },
+        otherDeductions: (payroll.deductions?.other || []).filter(d => d.type !== 'fine'),
         deductionsTotal: deductions.reduce((s, i) => s + i.amount, 0) + (payroll.totals?.deductions || 0),
       },
       totals: {

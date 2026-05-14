@@ -15,12 +15,12 @@ const {
   getAuditEntities
 } = require('../controllers/auditLogController');
 
-// Audit log routes
+// Audit log routes - specific routes must come before parameterized /:id
 router.get('/', protect, getAuditLogs);
-router.get('/:id', protect, getAuditLogById);
 router.get('/stats', protect, getAuditLogStats);
 router.get('/export', protect, exportAuditLogs);
 router.get('/actions', protect, getAuditActions);
 router.get('/entities', protect, getAuditEntities);
+router.get('/:id', protect, getAuditLogById);
 
 module.exports = router;

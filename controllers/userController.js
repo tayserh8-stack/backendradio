@@ -7,6 +7,7 @@ const { User, UserRole } = require('../models/User');
 const { Task, TaskStatus } = require('../models/Task');
 const { Settings, DEFAULT_EVALUATION_WEIGHTS } = require('../models/Settings');
 const { Notification, NotificationType } = require('../models/Notification');
+const { Payroll, PayrollStatus } = require('../models/Payroll');
 const Department = require('../models/Department');
 
 /**
@@ -125,7 +126,7 @@ const getUserById = async (req, res) => {
  */
 const createUser = async (req, res) => {
   try {
-    const { username, email, password, name, role, department } = req.body;
+    const { username, email, password, name, role, department, baseSalary, hoursShortfall } = req.body;
 
     // Validate required fields
     if (!username || !email || !password || !name) {
@@ -181,6 +182,7 @@ const createUser = async (req, res) => {
       name,
       role: role || UserRole.EMPLOYEE,
       department,
+      baseSalary: baseSalary || 0,
       isActive: true
     });
 
@@ -206,7 +208,7 @@ const createUser = async (req, res) => {
  */
 const updateUser = async (req, res) => {
   try {
-    const { name, phone, department, role, isActive } = req.body;
+    const { name, phone, department, role, isActive, baseSalary, housingAllowance, transportAllowance, otherAllowances, bonus, overtime, socialInsurance, tax, otherDeductions, hoursShortfall } = req.body;
     
     const user = await User.findById(req.params.id);
     if (!user) {
@@ -223,6 +225,16 @@ const updateUser = async (req, res) => {
     if (name) user.name = name;
     if (phone) user.phone = phone;
     if (department !== undefined) user.department = department || null;
+    if (baseSalary !== undefined) user.baseSalary = Number(baseSalary);
+    if (housingAllowance !== undefined) user.housingAllowance = Number(housingAllowance);
+    if (transportAllowance !== undefined) user.transportAllowance = Number(transportAllowance);
+    if (otherAllowances !== undefined) user.otherAllowances = Number(otherAllowances);
+    if (bonus !== undefined) user.bonus = Number(bonus);
+    if (overtime !== undefined) user.overtime = Number(overtime);
+    if (socialInsurance !== undefined) user.socialInsurance = Number(socialInsurance);
+    if (tax !== undefined) user.tax = Number(tax);
+    if (otherDeductions !== undefined) user.otherDeductions = Number(otherDeductions);
+    if (hoursShortfall !== undefined) user.hoursShortfall = Number(hoursShortfall);
     if (role) {
       // If changing to manager, require department
       if (role === 'manager' && !department && !user.department) {
@@ -238,6 +250,10 @@ const updateUser = async (req, res) => {
     }
     if (isActive !== undefined) user.isActive = isActive;
 
+    if (req.body.password && req.body.password.trim().length > 0) {
+      user.password = req.body.password;
+    }
+
     try {
       await user.save();
     } catch (saveError) {
@@ -246,6 +262,69 @@ const updateUser = async (req, res) => {
         success: false,
         message: 'خطأ في الحفظ: ' + saveError.message
       });
+    }
+
+    // Sync salary fields to pending Payroll records for this employee
+    const salaryFields = [baseSalary, housingAllowance, transportAllowance, otherAllowances, bonus, overtime, socialInsurance, tax, otherDeductions, hoursShortfall];
+    const hasSalaryChanges = salaryFields.some(f => f !== undefined);
+    if (hasSalaryChanges) {
+      try {
+        const pendingPayrolls = await Payroll.find({
+          employee: user._id,
+          status: { '$in': [PayrollStatus.PENDING] }
+        });
+        for (const payroll of pendingPayrolls) {
+          if (baseSalary !== undefined) payroll.baseSalary = Number(baseSalary);
+
+          // Sync allowances (housing, transport, other)
+          const newAllowances = [];
+          if (housingAllowance !== undefined) newAllowances.push({ type: 'housing', amount: Number(housingAllowance), description: 'بدل سكن' });
+          if (transportAllowance !== undefined) newAllowances.push({ type: 'transport', amount: Number(transportAllowance), description: 'بدل نقل' });
+          if (otherAllowances !== undefined) newAllowances.push({ type: 'other', amount: Number(otherAllowances), description: 'بدلات أخرى' });
+          if (newAllowances.length > 0) {
+            const existingNonMapped = (payroll.components.allowances || []).filter(a => !['housing', 'transport', 'other'].includes(a.type));
+            payroll.components.allowances = [...existingNonMapped, ...newAllowances];
+          }
+
+          // Sync bonus
+          if (bonus !== undefined) {
+            const bonusAmount = Number(bonus);
+            const existingNonBonus = (payroll.components.bonuses || []).filter(b => b.type !== 'other');
+            if (bonusAmount > 0) {
+              existingNonBonus.push({ type: 'other', amount: bonusAmount, reason: 'مكافأة' });
+            }
+            payroll.components.bonuses = existingNonBonus;
+          }
+
+          // Sync overtime
+          if (overtime !== undefined) {
+            payroll.components.overtime = {
+              hours: 0,
+              hourlyRate: 0,
+              totalAmount: Number(overtime)
+            };
+          }
+
+          // Sync socialInsurance, tax, otherDeductions → deductions.other[]
+          const newOtherDeductions = [];
+          if (socialInsurance !== undefined) newOtherDeductions.push({ type: 'insurance', amount: Number(socialInsurance), description: 'تأمين اجتماعي' });
+          if (tax !== undefined) newOtherDeductions.push({ type: 'tax', amount: Number(tax), description: 'ضريبة' });
+          if (otherDeductions !== undefined) newOtherDeductions.push({ type: 'other', amount: Number(otherDeductions), description: 'استقطاعات أخرى' });
+          if (hoursShortfall !== undefined) newOtherDeductions.push({ type: 'fine', amount: Number(hoursShortfall), description: 'نقص ساعات العمل' });
+          if (newOtherDeductions.length > 0) {
+            const existingNonMappedDed = (payroll.deductions.other || []).filter(d => !['insurance', 'tax', 'other', 'fine'].includes(d.type));
+            payroll.deductions.other = [...existingNonMappedDed, ...newOtherDeductions];
+          }
+
+          if (payroll.isPendingSalaryAssignment) payroll.isPendingSalaryAssignment = false;
+          await payroll.save();
+        }
+        if (pendingPayrolls.length > 0) {
+          console.log(`✅ Synced salary data for user ${user._id} to ${pendingPayrolls.length} pending payroll(s)`);
+        }
+      } catch (syncError) {
+        console.error('Error syncing salary to payroll:', syncError.message);
+      }
     }
 
     // Create notification for role change

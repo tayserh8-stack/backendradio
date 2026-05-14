@@ -10,6 +10,8 @@ const LeaveType = {
   ANNUAL: 'annual',
   SICK: 'sick',
   EMERGENCY: 'emergency',
+  EXCEPTIONAL: 'exceptional',
+  DEATH: 'death',
   UNPAID: 'unpaid',
   MATERNITY: 'maternity',
   PATERNITY: 'paternity',
@@ -123,7 +125,7 @@ leaveRequestSchema.statics.checkLeaveBalance = async function (employeeId, leave
   const usedDays = approvedLeaves.reduce((sum, l) => sum + (l.days || 0), 0);
   const usedHours = approvedLeaves.reduce((sum, l) => sum + (l.hours || 0), 0);
   const defaultBalances = {
-    annual: 30, sick: 15, emergency: 5, maternity: 90, paternity: 15,
+    annual: 30, sick: 15, emergency: 5, exceptional: 10, death: 7, maternity: 90, paternity: 15,
     compensatory: 0, unpaid: Infinity, hourly: 30, mission: Infinity, overtime: Infinity, attendance_correction: Infinity,
   };
   const totalBalance = defaultBalances[effectiveType] || 0;

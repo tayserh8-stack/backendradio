@@ -68,6 +68,18 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+
+  // Salary fields (managed via comprehensive payroll page)
+  baseSalary: { type: Number, default: 0 },
+  housingAllowance: { type: Number, default: 0 },
+  transportAllowance: { type: Number, default: 0 },
+  otherAllowances: { type: Number, default: 0 },
+  bonus: { type: Number, default: 0 },
+  overtime: { type: Number, default: 0 },
+  socialInsurance: { type: Number, default: 0 },
+  tax: { type: Number, default: 0 },
+  otherDeductions: { type: Number, default: 0 },
+  hoursShortfall: { type: Number, default: 0 },
   
   // Profile image URL
   profileImage: {
@@ -139,6 +151,16 @@ userSchema.methods.getPublicProfile = function() {
     name: this.name,
     role: this.role,
     department: this.department,
+    baseSalary: this.baseSalary,
+    housingAllowance: this.housingAllowance,
+    transportAllowance: this.transportAllowance,
+    otherAllowances: this.otherAllowances,
+    bonus: this.bonus,
+    overtime: this.overtime,
+    socialInsurance: this.socialInsurance,
+    tax: this.tax,
+    otherDeductions: this.otherDeductions,
+    hoursShortfall: this.hoursShortfall,
     profileImage: this.profileImage,
     phone: this.phone,
     startDate: this.startDate,

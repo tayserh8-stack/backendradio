@@ -6,11 +6,14 @@
 
 // Import required packages
 const express = require('express');
+const http = require('http');
 const path = require('path');
 const cors = require('cors');
 const crypto = require('crypto');
 const dotenv = require('dotenv');
 dotenv.config();
+const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 const connectDB = require('./config/db');
 const { User } = require('./models/User');
 const { Settings } = require('./models/Settings');
@@ -41,21 +44,18 @@ const coupletPromptRoutes = require('./routes/coupletPromptRoutes');
 
 // Initialize Express app
 const app = express();
+const server = http.createServer(app);
 
 // === إعدادات CORS للسحابة ===
 // ✅ Fixed: CORS configuration for Netlify domain and localhost development
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
-    // Allow specific origins
     const allowedOrigins = [
       'https://radioalthawra.netlify.app',
       'http://127.0.0.1:5173',
       'http://localhost:5173'
     ];
-    
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -78,6 +78,33 @@ app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Socket.IO for real-time notifications
+const io = new Server(server, {
+  cors: {
+    origin: ['https://radioalthawra.netlify.app', 'http://127.0.0.1:5173', 'http://localhost:5173'],
+    credentials: true,
+  },
+});
+
+io.use((socket, next) => {
+  try {
+    const token = socket.handshake.auth.token;
+    if (!token) return next(new Error('Authentication required'));
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-key-2024');
+    socket.userId = decoded.id;
+    next();
+  } catch (err) {
+    next(new Error('Invalid token'));
+  }
+});
+
+io.on('connection', (socket) => {
+  socket.join(socket.userId);
+  socket.on('disconnect', () => {});
+});
+
+global.io = io;
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -207,7 +234,7 @@ const HOST = '0.0.0.0'; // مهم ليعمل على Render
 
 // دالة بدء التشغيل
 const startServer = () => {
-  app.listen(PORT, HOST, () => {
+  server.listen(PORT, HOST, () => {
     console.log(`✅ الخادم يعمل على ${HOST}:${PORT}`);
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
     initializeData();

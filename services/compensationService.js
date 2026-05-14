@@ -41,7 +41,7 @@ const calculateCompensation = async (options) => {
   let amount = 0, isDeduction = false, payrollCode = '', breakdown = {};
 
   switch (requestType) {
-    case 'annual': case 'sick': case 'maternity': case 'paternity': case 'emergency': case 'compensatory':
+    case 'annual': case 'sick': case 'maternity': case 'paternity': case 'emergency': case 'exceptional': case 'death': case 'compensatory':
       amount = 0; isDeduction = false; payrollCode = 'LEAVE_FULLY_PAID';
       breakdown = { base: 0, days, dailyRate, note: 'Fully paid - no financial impact' };
       break;

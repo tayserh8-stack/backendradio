@@ -15,7 +15,17 @@ const NotificationType = {
   NEW_USER_REGISTERED: 'new_user_registered',
   ROLE_CHANGE: 'role_change',
   REWARD: 'reward',
-  NEW_MESSAGE: 'new_message'
+  NEW_MESSAGE: 'new_message',
+  LEAVE_REQUESTED: 'leave_requested',
+  LEAVE_APPROVED: 'leave_approved',
+  LEAVE_REJECTED: 'leave_rejected',
+  LEAVE_CANCELLED: 'leave_cancelled',
+  LEAVE_PENDING_GM: 'leave_pending_gm',
+  LEAVE_NEEDS_GM: 'leave_needs_gm',
+  PAYROLL: 'payroll',
+  RECRUITMENT: 'recruitment',
+  PERFORMANCE: 'performance',
+  PROMOTION: 'promotion'
 };
 
 // Notification Schema
