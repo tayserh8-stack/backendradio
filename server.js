@@ -40,6 +40,7 @@ const promptRoutes = require('./routes/promptRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const recruitmentPerformanceRoutes = require('./routes/recruitmentPerformanceRoutes');
+const financialMiscRoutes = require('./routes/financialMiscRoutes');
 const coupletPromptRoutes = require('./routes/coupletPromptRoutes');
 
 // Initialize Express app
@@ -210,6 +211,7 @@ app.use('/api/couplet-prompts', coupletPromptRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/recruitment', recruitmentPerformanceRoutes);
+app.use('/api/financial-misc', financialMiscRoutes);
 
 // Health check endpoint (مهم لـ Render)
 app.get('/api/health', (req, res) => {
