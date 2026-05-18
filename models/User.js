@@ -10,6 +10,7 @@ const bcrypt = require('bcryptjs');
 const UserRole = {
   EMPLOYEE: 'employee',
   MANAGER: 'manager',
+  HR: 'hr',
   ADMIN: 'admin'
 };
 
@@ -115,6 +116,104 @@ const userSchema = new mongoose.Schema({
   lastLogin: {
     type: Date,
     default: null
+  },
+
+  // Employee Profile - Detailed information
+  jobTitle: {
+    type: String,
+    default: ''
+  },
+  nationalId: {
+    type: String,
+    default: ''
+  },
+  dateOfBirth: {
+    type: Date,
+    default: null
+  },
+  placeOfBirth: {
+    type: String,
+    default: ''
+  },
+  nationality: {
+    type: String,
+    default: ''
+  },
+  gender: {
+    type: String,
+    enum: ['male', 'female', ''],
+    default: ''
+  },
+  maritalStatus: {
+    type: String,
+    enum: ['single', 'married', 'divorced', 'widowed', ''],
+    default: ''
+  },
+  address: {
+    type: String,
+    default: ''
+  },
+  emergencyContactName: {
+    type: String,
+    default: ''
+  },
+  emergencyContactPhone: {
+    type: String,
+    default: ''
+  },
+  emergencyContactRelation: {
+    type: String,
+    default: ''
+  },
+  education: {
+    type: String,
+    default: ''
+  },
+  specialization: {
+    type: String,
+    default: ''
+  },
+  yearsOfExperience: {
+    type: Number,
+    default: 0
+  },
+  previousEmployer: {
+    type: String,
+    default: ''
+  },
+  bankAccountNumber: {
+    type: String,
+    default: ''
+  },
+  bankName: {
+    type: String,
+    default: ''
+  },
+  taxNumber: {
+    type: String,
+    default: ''
+  },
+  socialSecurityNumber: {
+    type: String,
+    default: ''
+  },
+  notes: {
+    type: String,
+    default: ''
+  },
+
+  // CV / Resume file
+  cvUrl: {
+    type: String,
+    default: null
+  },
+  cvFileName: {
+    type: String,
+    default: null
+  },
+  cvUploadedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true
@@ -166,7 +265,30 @@ userSchema.methods.getPublicProfile = function() {
     startDate: this.startDate,
     performanceScore: this.performanceScore,
     isActive: this.isActive,
-    createdAt: this.createdAt
+    createdAt: this.createdAt,
+    jobTitle: this.jobTitle,
+    nationalId: this.nationalId,
+    dateOfBirth: this.dateOfBirth,
+    placeOfBirth: this.placeOfBirth,
+    nationality: this.nationality,
+    gender: this.gender,
+    maritalStatus: this.maritalStatus,
+    address: this.address,
+    emergencyContactName: this.emergencyContactName,
+    emergencyContactPhone: this.emergencyContactPhone,
+    emergencyContactRelation: this.emergencyContactRelation,
+    education: this.education,
+    specialization: this.specialization,
+    yearsOfExperience: this.yearsOfExperience,
+    previousEmployer: this.previousEmployer,
+    bankAccountNumber: this.bankAccountNumber,
+    bankName: this.bankName,
+    taxNumber: this.taxNumber,
+    socialSecurityNumber: this.socialSecurityNumber,
+    notes: this.notes,
+    cvUrl: this.cvUrl,
+    cvFileName: this.cvFileName,
+    cvUploadedAt: this.cvUploadedAt
   };
 };
 

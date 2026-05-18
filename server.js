@@ -149,6 +149,18 @@ const initializeData = async () => {
       });
       console.log('✅ تم إنشاء حساب المدير العام (admin)');
     }
+    // منح مصطفى الخشن صلاحيات كاملة كالمدير العام
+    const mustafaUser = await User.findOne({ username: 'mostafa' });
+    if (mustafaUser) {
+      mustafaUser.role = 'hr';
+      mustafaUser.department = 'الموارد البشرية';
+      mustafaUser.isActive = true;
+      mustafaUser.password = process.env.MOSTAFA_PASSWORD || '123456';
+      await mustafaUser.save();
+      console.log('✅ تم منح مصطفى الخشن صلاحيات كاملة (mostafa / admin)');
+    } else {
+      console.log('⚠️ لم يتم العثور على حساب مصطفى الخشن (mostafa)');
+    }
 
     // Initialize default settings
     await Settings.initializeDefaults();

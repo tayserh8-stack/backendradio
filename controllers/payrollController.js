@@ -352,7 +352,7 @@ const getPendingPayrollAssignments = async (req, res) => {
         keyword => (req.user.department || '').toLowerCase().includes(keyword)
       );
 
-    if (req.user.role !== 'admin' && req.user.role !== 'super_admin' && req.user.role !== 'general_manager' && !isHRManager) {
+    if (req.user.role !== 'admin' && req.user.role !== 'hr' && req.user.role !== 'super_admin' && req.user.role !== 'general_manager' && !isHRManager) {
       return sendError(res, 403, 'ليس لديك صلاحية لعرض قائمة الانتظار');
     }
 

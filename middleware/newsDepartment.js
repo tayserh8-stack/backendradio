@@ -1,5 +1,7 @@
 const newsDepartmentOnly = (req, res, next) => {
-  if (req.user && (req.user.role === 'admin' || (req.user.department && req.user.department.toLowerCase() === 'news'))) {
+  const role = req.user?.role?.toLowerCase() || '';
+  const dept = req.user?.department?.toLowerCase() || '';
+  if (role === 'admin' || (dept === 'news')) {
     return next();
   }
   return res.status(403).json({
@@ -9,7 +11,9 @@ const newsDepartmentOnly = (req, res, next) => {
 };
 
 const newsManagerOrAdmin = (req, res, next) => {
-  if (req.user && (req.user.role === 'admin' || (req.user.department && req.user.department.toLowerCase() === 'news' && req.user.role === 'manager'))) {
+  const role = req.user?.role?.toLowerCase() || '';
+  const dept = req.user?.department?.toLowerCase() || '';
+  if (role === 'admin' || (dept === 'news' && role === 'manager')) {
     return next();
   }
   return res.status(403).json({

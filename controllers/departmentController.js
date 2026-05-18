@@ -1,6 +1,7 @@
 const Department = require('../models/Department');
 const { Payroll } = require('../models/Payroll');
 const { User } = require('../models/User');
+const { Attendance } = require('../models/Attendance');
 
 const DEFAULT_DEPARTMENTS = [
   { name: 'المالي', color: '#EF4444', description: 'القسم المالي والمحاسبة' },
@@ -160,6 +161,104 @@ exports.deleteDepartment = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'خطأ في حذف القسم',
+      error: error.message
+    });
+  }
+};
+
+exports.getDepartmentStats = async (req, res) => {
+  try {
+    const departments = await Department.find().sort({ createdAt: -1 });
+    const totalDepartments = departments.length;
+
+    const users = await User.find({ role: { $in: ['employee', 'manager', 'hr'] } });
+    const totalEmployees = users.length;
+
+    const usersWithPerf = users.filter(u => u.performanceScore > 0);
+    const averagePerformance = usersWithPerf.length > 0
+      ? usersWithPerf.reduce((sum, u) => sum + u.performanceScore, 0) / usersWithPerf.length
+      : 0;
+
+    const salaryByDept = users.reduce((acc, u) => {
+      if (!u.department) return acc;
+      const gross = (u.baseSalary || 0) + (u.housingAllowance || 0) + (u.transportAllowance || 0) +
+        (u.otherAllowances || 0) + (u.bonus || 0) + (u.overtime || 0);
+      const dept = u.department;
+      if (!acc[dept]) acc[dept] = { totalGross: 0, count: 0 };
+      acc[dept].totalGross += gross;
+      acc[dept].count++;
+      return acc;
+    }, {});
+
+    const totalMonthlyPayroll = Object.values(salaryByDept).reduce((sum, d) => sum + d.totalGross, 0);
+    const averageMonthlySalary = totalEmployees > 0 ? totalMonthlyPayroll / totalEmployees : 0;
+
+    const attendanceHoursByDept = await Attendance.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'employee',
+          foreignField: '_id',
+          as: 'emp'
+        }
+      },
+      { $unwind: { path: '$emp', preserveNullAndEmptyArrays: false } },
+      {
+        $group: {
+          _id: '$emp.department',
+          totalHours: { $sum: { $ifNull: ['$duration', 0] } }
+        }
+      }
+    ]);
+
+    const departmentBreakdown = departments.map(dept => {
+      const deptUsers = users.filter(u =>
+        u.department === dept.name || u.department === dept._id.toString()
+      );
+      const activeUsers = deptUsers.filter(u => u.isActive);
+      const perfScores = deptUsers.filter(u => u.performanceScore > 0);
+      const avgPerf = perfScores.length > 0
+        ? perfScores.reduce((sum, u) => sum + u.performanceScore, 0) / perfScores.length
+        : 0;
+
+      const salaryData = salaryByDept[dept.name];
+      const salaryTotal = salaryData?.totalGross || 0;
+      const empCount = deptUsers.length || 1;
+      const avgSalary = salaryTotal > 0 ? salaryTotal / empCount : 0;
+
+      const hoursData = attendanceHoursByDept.find(h =>
+        h._id === dept.name || h._id === dept._id.toString()
+      );
+
+      return {
+        name: dept.name,
+        employeeCount: deptUsers.length,
+        activeEmployeeCount: activeUsers.length,
+        averagePerformance: Math.round(avgPerf * 100) / 100,
+        averageSalary: Math.round(avgSalary * 100) / 100,
+        workHours: Math.round((hoursData?.totalHours || 0) * 100) / 100
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalDepartments,
+        totalEmployees,
+        averagePerformance: Math.round(averagePerformance * 100) / 100,
+        totalMonthlyPayroll: Math.round(totalMonthlyPayroll * 100) / 100,
+        averageMonthlySalary: Math.round(averageMonthlySalary * 100) / 100,
+        totalWorkHours: Math.round(
+          attendanceHoursByDept.reduce((sum, d) => sum + d.totalHours, 0) * 100
+        ) / 100,
+        departmentBreakdown
+      }
+    });
+  } catch (error) {
+    console.error('خطأ في جلب إحصائيات الأقسام:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'خطأ في جلب إحصائيات الأقسام',
       error: error.message
     });
   }

@@ -225,9 +225,16 @@ const getAttendanceHistory = async (req, res) => {
     
     let query = {};
     
-    if (req.user.role === 'admin' || req.user.role === 'manager') {
+    const role = req.user.role ? req.user.role.toLowerCase() : '';
+    const dept = req.user.department ? req.user.department.toLowerCase() : '';
+    const isHrDept = dept === 'hr' || dept === 'human resources' || dept === 'الموارد البشرية';
+    
+    if (role === 'admin' || role === 'hr' || (role === 'manager' && isHrDept)) {
       if (employeeId) query.employee = employeeId;
-      if (req.user.role === 'manager' && !employeeId) {
+    } else if (role === 'manager') {
+      if (employeeId) {
+        query.employee = employeeId;
+      } else {
         query.department = req.user.department;
       }
     } else {
@@ -332,7 +339,9 @@ const getDepartmentAttendance = async (req, res) => {
     const { startDate, endDate } = req.query;
     
     // Check if user has access to this department
-    if (req.user.role === 'manager' && req.user.department !== department) {
+    const userDept = req.user.department ? req.user.department.toLowerCase() : '';
+    const isHrDept = userDept === 'hr' || userDept === 'human resources' || userDept === 'الموارد البشرية';
+    if (req.user.role === 'manager' && !isHrDept && userDept !== department.toLowerCase()) {
       return res.status(403).json({
         success: false,
         message: 'غير مصرح لك بالوصول إلى أقسام أخرى'

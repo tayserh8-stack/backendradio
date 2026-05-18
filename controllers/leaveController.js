@@ -25,7 +25,7 @@ const emitSocket = (userId, notification) => {
 const notifyManager = async (employeeId, leaveRequest) => {
   try {
     const employee = await User.findById(employeeId);
-    if (!employee || !employee.department) return;
+    if (!employee || !employee.department) return false;
     const manager = await User.findOne({ role: 'manager', department: employee.department, isActive: true });
     if (manager) {
       const notif = await Notification.createNotification(
@@ -35,29 +35,36 @@ const notifyManager = async (employeeId, leaveRequest) => {
         leaveRequest._id
       );
       emitSocket(manager._id, notif);
+      return true;
     }
-  } catch (e) { console.error('notifyManager error:', e.message); }
+    return false;
+  } catch (e) { console.error('notifyManager error:', e.message); return false; }
 };
 
-const notifyAdmin = async (leaveRequest) => {
+const notifyAdmin = async (leaveRequest, approvedInfo) => {
   try {
-    const admin = await User.findOne({ role: 'admin', isActive: true });
-    if (admin) {
+    const admins = await User.find({ role: { $in: ['admin', 'hr'] }, isActive: true });
+    if (admins.length > 0) {
       const employee = await User.findById(leaveRequest.employee);
-      const notif = await Notification.createNotification(
-        admin._id, NotificationType.LEAVE_NEEDS_GM,
-        'طلب إجازة يحتاج موافقة المدير العام',
-        `طلب إجازة ${leaveLabel(leaveRequest.type)} للموظف ${employee?.name} (أكثر من 3 أيام) يحتاج موافقتك`,
-        leaveRequest._id
-      );
-      emitSocket(admin._id, notif);
+      const daysMsg = approvedInfo
+        ? ` (وافق المدير على ${approvedInfo} يوم من أصل ${leaveRequest.days})`
+        : ` (${leaveRequest.days} أيام عمل) - موافقة مدير القسم`;
+      for (const admin of admins) {
+        const notif = await Notification.createNotification(
+          admin._id, NotificationType.LEAVE_NEEDS_GM,
+          'طلب إجازة يحتاج موافقة المدير العام',
+          `طلب إجازة ${leaveLabel(leaveRequest.type)} للموظف ${employee?.name}${daysMsg} يحتاج موافقتك`,
+          leaveRequest._id
+        );
+        emitSocket(admin._id, notif);
+      }
     }
   } catch (e) { console.error('notifyAdmin error:', e.message); }
 };
 
 const notifyHR = async (leaveRequest) => {
   try {
-    const hr = await User.findOne({ role: 'manager', department: 'hr', isActive: true });
+    const hr = await User.findOne({ role: 'manager', department: { $in: ['hr', 'human resources', 'الموارد البشرية'] }, isActive: true });
     if (hr) {
       const employee = await User.findById(leaveRequest.employee);
       const notif = await Notification.createNotification(
@@ -183,7 +190,12 @@ const createLeaveRequest = async (req, res) => {
     leaveRequest.status = LeaveStatus.PENDING_MANAGER;
     await leaveRequest.save();
 
-    await notifyManager(employeeId, leaveRequest);
+    const managerNotified = await notifyManager(employeeId, leaveRequest);
+    if (!managerNotified) {
+      leaveRequest.status = LeaveStatus.PENDING_GENERAL_MANAGER;
+      await leaveRequest.save();
+      await notifyAdmin(leaveRequest);
+    }
 
     res.status(201).json({ success: true, message: 'تم تقديم طلب الإجازة بنجاح', data: { leaveRequest } });
   } catch (error) {
@@ -202,7 +214,7 @@ const updateLeaveRequestStatus = async (req, res) => {
 
     const prevStatus = leaveRequest.status;
     const isManager = req.user.role === 'manager';
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'hr';
 
     if (status === LeaveStatus.REJECTED) {
       if (isManager || isAdmin) {
@@ -232,17 +244,27 @@ const updateLeaveRequestStatus = async (req, res) => {
         if (leaveRequest.department !== req.user.department)
           return res.status(403).json({ success: false, message: 'غير مصرح لك - هذا الموظف ليس في قسمك' });
 
+        const { approvedDays } = req.body;
         leaveRequest.approvedBy = req.user._id;
         leaveRequest.approvedAt = new Date();
 
-        if (leaveRequest.days > 3) {
+        const calendarDays = Math.ceil((new Date(leaveRequest.endDate) - new Date(leaveRequest.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+        if (calendarDays > 3) {
+          if (approvedDays && approvedDays < leaveRequest.days) {
+            leaveRequest.managerSuggestedDays = approvedDays;
+          } else {
+            leaveRequest.managerSuggestedDays = null;
+          }
           leaveRequest.status = LeaveStatus.PENDING_GENERAL_MANAGER;
           await leaveRequest.save();
-          await notifyAdmin(leaveRequest);
+          await notifyAdmin(leaveRequest, leaveRequest.managerSuggestedDays);
+          const gmMsg = leaveRequest.managerSuggestedDays
+            ? `طلب ${leaveLabel(leaveRequest.type)} (وافق مدير القسم على ${leaveRequest.managerSuggestedDays} يوم من أصل ${leaveRequest.days}) بانتظار موافقة المدير العام`
+            : `طلب ${leaveLabel(leaveRequest.type)} (${leaveRequest.days} أيام) تمت موافقة مدير القسم وهو بانتظار موافقة المدير العام`;
           const pendingGmNotif = await Notification.createNotification(
             leaveRequest.employee._id, NotificationType.LEAVE_PENDING_GM,
             'طلب الإجازة بانتظار موافقة المدير العام',
-            `طلب ${leaveLabel(leaveRequest.type)} (${leaveRequest.days} أيام) تمت موافقة مدير القسم وهو بانتظار موافقة المدير العام`,
+            gmMsg,
             leaveRequest._id
           );
           emitSocket(leaveRequest.employee._id, pendingGmNotif);
@@ -265,15 +287,28 @@ const updateLeaveRequestStatus = async (req, res) => {
       }
 
       if (isAdmin && leaveRequest.status === LeaveStatus.PENDING_GENERAL_MANAGER) {
+        const { approvedDays } = req.body;
         leaveRequest.status = LeaveStatus.APPROVED;
         leaveRequest.approvedBy = req.user._id;
         leaveRequest.approvedAt = new Date();
+        if (approvedDays && approvedDays < leaveRequest.days) {
+          leaveRequest.days = approvedDays;
+          if (leaveRequest.startDate) {
+            const newEnd = new Date(leaveRequest.startDate);
+            let remaining = approvedDays - 1;
+            while (remaining > 0) {
+              newEnd.setDate(newEnd.getDate() + 1);
+              if (newEnd.getDay() >= 1 && newEnd.getDay() <= 5) remaining--;
+            }
+            leaveRequest.endDate = newEnd;
+          }
+        }
         await approveWithPayrollSync(leaveRequest, req);
 
         const gmApprovedNotif = await Notification.createNotification(
           leaveRequest.employee._id, NotificationType.LEAVE_APPROVED,
           'تمت الموافقة على طلب الإجازة',
-          `تمت الموافقة النهائية على طلب ${leaveLabel(leaveRequest.type)} من ${leaveRequest.startDate?.toLocaleDateString('ar-EG')} إلى ${leaveRequest.endDate?.toLocaleDateString('ar-EG')}`,
+          `تمت الموافقة النهائية على طلب ${leaveLabel(leaveRequest.type)} (${leaveRequest.days} يوم) من ${leaveRequest.startDate?.toLocaleDateString('ar-EG')} إلى ${leaveRequest.endDate?.toLocaleDateString('ar-EG')}`,
           leaveRequest._id
         );
         emitSocket(leaveRequest.employee._id, gmApprovedNotif);
@@ -315,7 +350,7 @@ const cancelLeaveRequest = async (req, res) => {
     const leaveRequest = await LeaveRequest.findById(req.params.id).populate('employee', 'name email department');
     if (!leaveRequest) return res.status(404).json({ success: false, message: 'الطلب غير موجود' });
     const isOwner = leaveRequest.employee._id.toString() === req.user._id.toString();
-    if (!isOwner && req.user.role !== 'admin')
+    if (!isOwner && req.user.role !== 'admin' && req.user.role !== 'hr')
       return res.status(403).json({ success: false, message: 'غير مصرح لك' });
     if (!['draft', 'pending_manager', 'pending_general_manager', 'approved', 'synced_to_payroll'].includes(leaveRequest.status))
       return res.status(400).json({ success: false, message: 'لا يمكن إلغاء الطلب بعد المعالجة' });
@@ -380,7 +415,7 @@ const getPendingLeaveRequests = async (req, res) => {
         status: LeaveStatus.PENDING_MANAGER,
         department: req.user.department,
       }).populate('employee', 'name email department').sort({ createdAt: -1 });
-    } else if (req.user.role === 'admin') {
+    } else if (req.user.role === 'admin' || req.user.role === 'hr') {
       leaveRequests = await LeaveRequest.find({
         status: { $in: [LeaveStatus.PENDING_MANAGER, LeaveStatus.PENDING_GENERAL_MANAGER] },
       }).populate('employee', 'name email department').sort({ createdAt: -1 });

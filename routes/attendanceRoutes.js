@@ -34,7 +34,20 @@ router.get('/stats', protect, getAttendanceStats);
 // GET /api/attendance/department/:department - Get department attendance (manager/admin)
 router.get('/department/:department', protect, managerOrAdmin, getDepartmentAttendance);
 
-// PUT /api/attendance/:id - Update attendance record (admin only)
-router.put('/:id', protect, adminOnly, updateAttendance);
+// PUT /api/attendance/:id - Update attendance record (admin/hr only)
+const hrAndAdmin = (req, res, next) => {
+  const role = req.user?.role?.toLowerCase() || '';
+  const dept = req.user?.department?.toLowerCase() || '';
+  const isHrDept = dept === 'hr' || dept === 'human resources' || dept === 'الموارد البشرية';
+  if (role === 'admin' || role === 'hr' || (role === 'manager' && isHrDept)) {
+    next();
+  } else {
+    return res.status(403).json({
+      success: false,
+      message: 'غير مصرح لك بالوصول لهذه الصفحة'
+    });
+  }
+};
+router.put('/:id', protect, hrAndAdmin, updateAttendance);
 
 module.exports = router;

@@ -51,6 +51,7 @@ const leaveRequestSchema = new mongoose.Schema({
   department: { type: String, default: null },
   managerNotes: { type: String, default: null },
   coveragePlan: { type: String, default: null },
+  managerSuggestedDays: { type: Number, default: null },
   idempotencyKey: { type: String, unique: true, sparse: true, default: null },
 
   // Mission-specific fields
@@ -88,16 +89,14 @@ leaveRequestSchema.virtual('isActive').get(function () {
 
 leaveRequestSchema.methods.calculateDays = function () {
   if (!this.startDate || !this.endDate) return 0;
-  const start = new Date(this.startDate), end = new Date(this.endDate);
-  let businessDays = 0;
-  const current = new Date(start);
-  while (current <= end) {
-    const d = current.getDay();
-    if (d >= 1 && d <= 5) businessDays++;
-    current.setDate(current.getDate() + 1);
-  }
-  if (this.isHalfDay) businessDays -= 0.5;
-  this.days = Math.max(0, businessDays);
+  const start = new Date(this.startDate);
+  const end = new Date(this.endDate);
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  const diffTime = Math.abs(end - start);
+  let totalDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  if (this.isHalfDay) totalDays -= 0.5;
+  this.days = Math.max(0, totalDays);
   return this.days;
 };
 

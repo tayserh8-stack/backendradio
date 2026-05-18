@@ -76,7 +76,8 @@ const protect = async (req, res, next) => {
  * Middleware to check if user is admin
  */
 const adminOnly = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+  const role = req.user?.role?.toLowerCase() || '';
+  if (role === 'admin' || role === 'hr') {
     next();
   } else {
     return res.status(403).json({
@@ -87,10 +88,11 @@ const adminOnly = (req, res, next) => {
 };
 
 /**
- * Middleware to check if user is manager or admin
+ * Middleware to check if user is manager, hr, or admin
  */
 const managerOrAdmin = (req, res, next) => {
-  if (req.user && (req.user.role === 'manager' || req.user.role === 'admin')) {
+  const role = req.user?.role?.toLowerCase() || '';
+  if (role === 'manager' || role === 'hr' || role === 'admin') {
     next();
   } else {
     return res.status(403).json({
@@ -104,7 +106,8 @@ const managerOrAdmin = (req, res, next) => {
  * Middleware to check if user is employee (not admin)
  */
 const employeeOnly = (req, res, next) => {
-  if (req.user && req.user.role === 'employee') {
+  const role = req.user?.role?.toLowerCase() || '';
+  if (role === 'employee') {
     next();
   } else {
     return res.status(403).json({
@@ -123,9 +126,25 @@ const generateToken = (userId) => {
   });
 };
 
+/**
+ * Middleware to check if user is admin or HR
+ */
+const adminOrHR = (req, res, next) => {
+  const role = req.user?.role?.toLowerCase() || '';
+  if (role === 'admin' || role === 'hr') {
+    next();
+  } else {
+    return res.status(403).json({
+      success: false,
+      message: 'غير مصرح لك بالوصول لهذه الصفحة'
+    });
+  }
+};
+
 module.exports = {
   protect,
   adminOnly,
+  adminOrHR,
   managerOrAdmin,
   employeeOnly,
   generateToken,

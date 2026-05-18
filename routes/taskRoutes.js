@@ -22,7 +22,7 @@ const {
   getTaskReports,
   getTotalTasks
 } = require('../controllers/taskController');
-const { protect, managerOrAdmin, adminOnly } = require('../middleware/authMiddleware');
+const { protect, managerOrAdmin, adminOnly, adminOrHR } = require('../middleware/authMiddleware');
 
 // POST /api/tasks - Create task
 router.post('/', protect, createTask);
@@ -36,8 +36,8 @@ router.get('/created', protect, getCreatedTasks);
 // GET /api/tasks/to-evaluate - Get tasks to evaluate (manager)
 router.get('/to-evaluate', protect, managerOrAdmin, getTasksToEvaluate);
 
-// GET /api/tasks/to-approve - Get tasks to approve (admin)
-router.get('/to-approve', protect, adminOnly, getTasksToApprove);
+// GET /api/tasks/to-approve - Get tasks to approve (admin or HR)
+router.get('/to-approve', protect, adminOrHR, getTasksToApprove);
 
 // GET /api/tasks/summary/daily - Get daily summary
 router.get('/summary/daily', protect, getDailySummary);
