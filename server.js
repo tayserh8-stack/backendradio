@@ -58,6 +58,8 @@ const corsOptions = {
     ];
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
+    } else if (origin.endsWith('.netlify.app')) {
+      callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
@@ -82,7 +84,14 @@ app.use(express.urlencoded({ extended: true }));
 // Socket.IO for real-time notifications
 const io = new Server(server, {
   cors: {
-    origin: ['https://radioalthawra.netlify.app', 'http://127.0.0.1:5173', 'http://localhost:5173'],
+    origin: (origin, callback) => {
+      const allowedOrigins = ['https://radioalthawra.netlify.app', 'http://127.0.0.1:5173', 'http://localhost:5173'];
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.netlify.app')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   },
 });
