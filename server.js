@@ -213,11 +213,14 @@ app.use('/api/recruitment', recruitmentPerformanceRoutes);
 
 // Health check endpoint (مهم لـ Render)
 app.get('/api/health', (req, res) => {
+  const mongoose = require('mongoose');
+  const dbName = mongoose.connection?.db?.databaseName || 'not connected';
   res.json({ 
     status: 'success', 
     message: 'الخادم يعمل بشكل صحيح',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    database: dbName
   });
 });
 

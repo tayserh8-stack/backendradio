@@ -10,9 +10,11 @@ const connectDB = async () => {
     // Get MongoDB URI from environment or use default
     const mongoURI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/employee_task_management';
     
+    const masked = mongoURI.replace(/\/\/.*@/, '//***:***@');
     await mongoose.connect(mongoURI);
     
-    console.log('✅ تم الاتصال بقاعدة البيانات بنجاح');
+    const dbName = mongoose.connection.db?.databaseName || 'unknown';
+    console.log(`✅ تم الاتصال بقاعدة البيانات بنجاح (URI: ${masked}, database: ${dbName})`);
   } catch (error) {
     console.error('❌ خطأ في الاتصال بقاعدة البيانات:', error.message);
     process.exit(1);
