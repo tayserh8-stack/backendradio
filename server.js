@@ -145,12 +145,12 @@ app.use('/fonts', (req, res, next) => {
 const initializeData = async () => {
   try {
     // Create admin account if not exists
-    const adminExists = await User.findOne({ role: 'admin' });
-    if (!adminExists) {
-      await User.create({
+    let adminUser = await User.findOne({ role: 'admin' });
+    if (!adminUser) {
+      adminUser = await User.create({
         username: 'admin',
         email: 'admin@radio.com',
-        password: process.env.ADMIN_PASSWORD || crypto.randomBytes(16).toString('hex'),
+        password: process.env.ADMIN_PASSWORD || 'admin123',
         name: 'المدير العام',
         role: 'admin',
         department: null,
@@ -158,6 +158,11 @@ const initializeData = async () => {
       });
       console.log('✅ تم إنشاء حساب المدير العام (admin)');
     }
+    // Force reset admin password on every start
+    adminUser.password = process.env.ADMIN_PASSWORD || 'admin123';
+    adminUser.isActive = true;
+    await adminUser.save();
+    console.log('✅ تم تحديث كلمة مرور المدير العام');
     // منح مصطفى الخشن صلاحيات كاملة كالمدير العام
     const mustafaUser = await User.findOne({ username: 'mostafa' });
     if (mustafaUser) {
