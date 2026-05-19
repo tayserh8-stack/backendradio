@@ -73,11 +73,11 @@ const protect = async (req, res, next) => {
 };
 
 /**
- * Middleware to check if user is admin
+ * Middleware to check if user is admin (only admin, not HR)
  */
 const adminOnly = (req, res, next) => {
   const role = req.user?.role?.toLowerCase() || '';
-  if (role === 'admin' || role === 'hr') {
+  if (role === 'admin') {
     next();
   } else {
     return res.status(403).json({

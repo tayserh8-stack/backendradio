@@ -20,7 +20,7 @@ const { User } = require('./models/User');
 const { Settings } = require('./models/Settings');
 const { Prompt } = require('./models/Prompt');
 const { seedDefaultDepartments } = require('./controllers/departmentController');
-const { globalLimiter } = require('./middleware/rateLimiter');
+const { globalLimiter, authLimiter } = require('./middleware/rateLimiter');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -83,8 +83,8 @@ app.use(cors(corsOptions));
 app.use(helmet());
 app.use(globalLimiter);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Socket.IO for real-time notifications
 const io = new Server(server, {
@@ -195,7 +195,7 @@ const initializeData = async () => {
 };
 
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/notifications', notificationRoutes);

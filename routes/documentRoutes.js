@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
+const { documentOwnerOrAdmin } = require('../middleware/ownershipMiddleware');
 const {
   uploadDocument,
   getMyDocuments,
@@ -25,13 +26,13 @@ router.post('/upload', protect, upload.single('file'), uploadDocument);
 router.get('/', protect, getMyDocuments);
 
 // Get document by ID
-router.get('/:id', protect, getDocumentById);
+router.get('/:id', protect, documentOwnerOrAdmin, getDocumentById);
 
 // Update document metadata
 router.put('/:id', protect, updateDocument);
 
 // Delete document
-router.delete('/:id', protect, deleteDocument);
+router.delete('/:id', protect, documentOwnerOrAdmin, deleteDocument);
 
 // Get document versions
 router.get('/:id/versions', protect, getDocumentVersions);

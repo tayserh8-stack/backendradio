@@ -96,6 +96,17 @@ const getAllManagers = async (req, res) => {
  */
 const getUserById = async (req, res) => {
   try {
+    const role = req.user?.role?.toLowerCase() || '';
+    const isAdminOrHR = role === 'admin' || role === 'hr';
+    const isOwnProfile = req.user._id.toString() === req.params.id;
+
+    if (!isAdminOrHR && !isOwnProfile) {
+      return res.status(403).json({
+        success: false,
+        message: 'غير مصرح لك بالوصول لهذه الصفحة'
+      });
+    }
+
     const user = await User.findById(req.params.id).select('-password');
     
     if (!user) {

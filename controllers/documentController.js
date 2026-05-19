@@ -199,8 +199,10 @@ const getDocumentById = async (req, res) => {
       });
     }
     
-    // Check access permissions
-    if (!document.canAccess(req.user)) {
+    // Check access permissions (admin/HR bypass via ownership middleware)
+    const role = req.user?.role?.toLowerCase() || '';
+    const isAdminOrHR = role === 'admin' || role === 'hr';
+    if (!isAdminOrHR && !document.canAccess(req.user)) {
       return res.status(403).json({
         success: false,
         message: 'لا لديك صلاحية للوصول إلى هذه الوثيقة'
@@ -321,8 +323,10 @@ const deleteDocument = async (req, res) => {
       });
     }
     
-    // Check ownership (only owner can delete)
-    if (!document.owner.equals(req.user._id)) {
+    // Check ownership (owner or admin/HR)
+    const role = req.user?.role?.toLowerCase() || '';
+    const isAdminOrHR = role === 'admin' || role === 'hr';
+    if (!document.owner.equals(req.user._id) && !isAdminOrHR) {
       return res.status(403).json({
         success: false,
         message: 'لا لديك صلاحية لحذف هذه الوثيقة'

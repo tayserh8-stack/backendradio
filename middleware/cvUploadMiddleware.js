@@ -41,13 +41,24 @@ const storage = multer.diskStorage({
 
 const fileFilter = (req, file, cb) => {
   const ext = getExtension(file.originalname);
-  const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png'];
-  
-  if (allowedExtensions.includes(ext)) {
-    cb(null, true);
-  } else {
-    cb(new Error('صيغة الملف غير مسموحة. الصيغ المسموحة: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG'), false);
+  const allowedExtensions = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'];
+  const allowedMimeTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/jpeg',
+    'image/png'
+  ];
+
+  if (!allowedExtensions.includes(ext)) {
+    return cb(new Error('صيغة الملف غير مسموحة. الصيغ المسموحة: PDF, DOC, DOCX, JPG, PNG'), false);
   }
+
+  if (!allowedMimeTypes.includes(file.mimetype)) {
+    return cb(new Error('نوع الملف غير مسموحة. الأنواع المسموحة: PDF, DOC, DOCX, JPG, PNG'), false);
+  }
+
+  cb(null, true);
 };
 
 const upload = multer({
