@@ -8,6 +8,25 @@ const { User, UserRole, Department } = require('../models/User');
 const { Notification, NotificationType } = require('../models/Notification');
 const { generateToken, JWT_SECRET } = require('../middleware/authMiddleware');
 
+const validatePasswordComplexity = (password) => {
+  if (!password || password.trim().length === 0) {
+    return false;
+  }
+  if (password.length < 8) {
+    return false;
+  }
+  if (!/[A-Z]/.test(password)) {
+    return false;
+  }
+  if (!/[a-z]/.test(password)) {
+    return false;
+  }
+  if (!/[0-9]/.test(password)) {
+    return false;
+  }
+  return true;
+};
+
 const departmentNames = {
   financial: 'المالي',
   it: 'تقنية المعلومات',
@@ -50,11 +69,11 @@ const register = async (req, res) => {
       });
     }
 
-    // Check password length
-    if (password.length < 6) {
+    // Check password complexity
+    if (!validatePasswordComplexity(password)) {
       return res.status(400).json({
         success: false,
-        message: 'يجب أن تكون كلمة المرور 6 أحرف على الأقل'
+        message: 'Password does not meet security requirements'
       });
     }
 
@@ -150,16 +169,35 @@ const login = async (req, res) => {
       });
     }
 
+    // Check if account is temporarily locked
+    if (user.lockUntil && user.lockUntil > Date.now()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Account temporarily locked. Try again later.'
+      });
+    }
+
     // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      user.loginAttempts += 1;
+
+      if (user.loginAttempts >= 5) {
+        user.lockUntil = Date.now() + 15 * 60 * 1000;
+        user.loginAttempts = 0;
+      }
+
+      await user.save();
+
       return res.status(401).json({
         success: false,
         message: 'اسم المستخدم أو كلمة المرور غير صحيحة'
       });
     }
 
-    // Update last login
+    // Reset lockout counters on success
+    user.loginAttempts = 0;
+    user.lockUntil = null;
     user.lastLogin = new Date();
     await user.save();
 
@@ -237,6 +275,14 @@ const changePassword = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'كلمة المرور الحالية غير صحيحة'
+      });
+    }
+
+    // Check new password complexity
+    if (!validatePasswordComplexity(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password does not meet security requirements'
       });
     }
 

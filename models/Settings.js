@@ -71,6 +71,7 @@ settingsSchema.statics.initializeDefaults = async function() {
     { key: 'leaveMinNoticeDays', value: 1, description: 'الحد الأدنى للإشعار المسبق (أيام)' },
     { key: 'leaveAllowHalfDay', value: true, description: 'السماح بنصف يوم إجازة' },
     { key: 'leaveWeekendCounting', value: false, description: 'احتساب عطلة نهاية الأسبوع ضمن الإجازة' },
+    { key: 'financialMiscExchangeRate', value: 25000, description: 'سعر صرف الدولار' },
   ];
   
   for (const setting of defaults) {

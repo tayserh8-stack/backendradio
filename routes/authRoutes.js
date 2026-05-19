@@ -14,14 +14,13 @@ const {
   updateProfileImage 
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
-const { authLimiter } = require('../middleware/rateLimiter');
 const upload = require('../middleware/uploadMiddleware');
 
 // POST /api/auth/register - Register new user
 router.post('/register', register);
 
 // POST /api/auth/login - Login user
-router.post('/login', authLimiter, login);
+router.post('/login', login);
 
 // GET /api/auth/me - Get current user
 router.get('/me', protect, getMe);

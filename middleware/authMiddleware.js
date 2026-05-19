@@ -122,7 +122,7 @@ const employeeOnly = (req, res, next) => {
  */
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, JWT_SECRET, {
-    expiresIn: '7d' // Token expires in 7 days
+    expiresIn: '1d' // Token expires in 24 hours (Step D1)
   });
 };
 

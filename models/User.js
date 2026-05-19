@@ -118,6 +118,10 @@ const userSchema = new mongoose.Schema({
     default: null
   },
 
+  // Brute force protection
+  loginAttempts: { type: Number, default: 0 },
+  lockUntil: { type: Date, default: null },
+
   // Employee Profile - Detailed information
   jobTitle: {
     type: String,

@@ -187,32 +187,16 @@ const getMyDocuments = async (req, res) => {
  */
 const getDocumentById = async (req, res) => {
   try {
-    const document = await Document.findById(req.params.id)
-      .populate('owner uploadedBy', 'username name')
-      .populate('allowedUsers', 'username name')
-      .populate('parentDocument', 'title fileUrl version');
-    
-    if (!document) {
-      return res.status(404).json({
-        success: false,
-        message: 'الوثيقة غير موجودة'
-      });
-    }
-    
-    // Check access permissions (admin/HR bypass via ownership middleware)
-    const role = req.user?.role?.toLowerCase() || '';
-    const isAdminOrHR = role === 'admin' || role === 'hr';
-    if (!isAdminOrHR && !document.canAccess(req.user)) {
-      return res.status(403).json({
-        success: false,
-        message: 'لا لديك صلاحية للوصول إلى هذه الوثيقة'
-      });
-    }
-    
+    await req.document.populate([
+      { path: 'owner uploadedBy', select: 'username name' },
+      { path: 'allowedUsers', select: 'username name' },
+      { path: 'parentDocument', select: 'title fileUrl version' }
+    ]);
+
     res.json({
       success: true,
       data: {
-        document
+        document: req.document
       }
     });
   } catch (error) {

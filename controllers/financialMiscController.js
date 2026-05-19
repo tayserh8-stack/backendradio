@@ -1,4 +1,27 @@
 const FinancialMisc = require('../models/FinancialMisc');
+const { Settings } = require('../models/Settings');
+
+exports.getExchangeRate = async (req, res) => {
+  try {
+    const rate = await Settings.getValue('financialMiscExchangeRate', 25000);
+    res.json({ success: true, data: { rate } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.setExchangeRate = async (req, res) => {
+  try {
+    const { rate } = req.body;
+    if (!rate || isNaN(rate) || rate <= 0) {
+      return res.status(400).json({ success: false, message: 'سعر صرف غير صالح' });
+    }
+    await Settings.setValue('financialMiscExchangeRate', Number(rate), 'سعر صرف الدولار');
+    res.json({ success: true, data: { rate: Number(rate) }, message: 'تم تحديث سعر الصرف' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 exports.getAll = async (req, res) => {
   try {

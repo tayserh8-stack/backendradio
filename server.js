@@ -20,7 +20,7 @@ const { User } = require('./models/User');
 const { Settings } = require('./models/Settings');
 const { Prompt } = require('./models/Prompt');
 const { seedDefaultDepartments } = require('./controllers/departmentController');
-const { globalLimiter } = require('./middleware/rateLimiter');
+
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -48,6 +48,9 @@ const coupletPromptRoutes = require('./routes/coupletPromptRoutes');
 // Initialize Express app
 const app = express();
 const server = http.createServer(app);
+
+// Trust Render proxy so req.ip returns real client IP (not proxy IP)
+app.set('trust proxy', 1);
 
 // === إعدادات CORS للسحابة ===
 // ✅ Fixed: CORS configuration for Netlify domain and localhost development
@@ -80,11 +83,24 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(helmet());
-app.use(globalLimiter);
+
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+
+app.use((req, res, next) => {
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Serve uploaded files BEFORE rate limiter (images must not count against API budget)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
 
 // Socket.IO for real-time notifications
 const io = new Server(server, {
@@ -119,9 +135,6 @@ io.on('connection', (socket) => {
 });
 
 global.io = io;
-
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Connect to database
 connectDB();
