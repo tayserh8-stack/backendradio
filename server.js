@@ -20,7 +20,7 @@ const { User } = require('./models/User');
 const { Settings } = require('./models/Settings');
 const { Prompt } = require('./models/Prompt');
 const { seedDefaultDepartments } = require('./controllers/departmentController');
-const { globalLimiter, authLimiter } = require('./middleware/rateLimiter');
+const { globalLimiter } = require('./middleware/rateLimiter');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -163,24 +163,6 @@ const initializeData = async () => {
       });
       console.log('✅ تم إنشاء حساب المدير العام (admin)');
     }
-    // Force reset admin password on every start
-    adminUser.password = process.env.ADMIN_PASSWORD || 'admin123';
-    adminUser.isActive = true;
-    await adminUser.save();
-    console.log('✅ تم تحديث كلمة مرور المدير العام');
-    // منح مصطفى الخشن صلاحيات كاملة كالمدير العام
-    const mustafaUser = await User.findOne({ username: 'mostafa' });
-    if (mustafaUser) {
-      mustafaUser.role = 'hr';
-      mustafaUser.department = 'الموارد البشرية';
-      mustafaUser.isActive = true;
-      mustafaUser.password = process.env.MOSTAFA_PASSWORD || '123456';
-      await mustafaUser.save();
-      console.log('✅ تم منح مصطفى الخشن صلاحيات كاملة (mostafa / admin)');
-    } else {
-      console.log('⚠️ لم يتم العثور على حساب مصطفى الخشن (mostafa)');
-    }
-
     // Initialize default settings
     await Settings.initializeDefaults();
 
@@ -195,7 +177,7 @@ const initializeData = async () => {
 };
 
 // Routes
-app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/notifications', notificationRoutes);
