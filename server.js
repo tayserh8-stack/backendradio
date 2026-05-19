@@ -9,6 +9,7 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const cors = require('cors');
+const helmet = require('helmet');
 const crypto = require('crypto');
 const dotenv = require('dotenv');
 dotenv.config();
@@ -19,6 +20,7 @@ const { User } = require('./models/User');
 const { Settings } = require('./models/Settings');
 const { Prompt } = require('./models/Prompt');
 const { seedDefaultDepartments } = require('./controllers/departmentController');
+const { globalLimiter } = require('./middleware/rateLimiter');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -78,6 +80,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.use(helmet());
+app.use(globalLimiter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
